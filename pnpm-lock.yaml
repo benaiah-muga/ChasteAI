@@ -41,6 +41,9 @@ importers:
       '@chaste-ai/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@chaste-ai/analytics':
+        specifier: workspace:*
+        version: link:../../packages/analytics
       '@chaste-ai/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -139,6 +142,25 @@ importers:
       eslint:
         specifier: ^9.0.0
         version: 9.39.4
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  packages/analytics:
+    dependencies:
+      '@chaste-ai/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: ^0.39.0
+        version: 0.39.3(@libsql/client@0.14.0)(@types/pg@8.20.0)(pg@8.22.0)
+    devDependencies:
+      '@chaste-ai/typescript-config':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.0
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
