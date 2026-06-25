@@ -1,3 +1,5 @@
 export { createProvider, getAvailableProviderTypes, providerRegistry } from "./provider"
 export type { AIProvider, ProviderFactory } from "./types/provider"
 export * from "./types"
+export { chunkText } from "./chunking"
+export type { Chunk, ChunkOptions } from "./chunking"

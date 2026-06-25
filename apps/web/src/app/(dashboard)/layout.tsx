@@ -6,14 +6,11 @@ import { usePathname } from "next/navigation"
 const navItems = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/agents", label: "Agents" },
-  { href: "/dashboard/workspaces", label: "Workspaces" },
+  { href: "/dashboard/api-keys", label: "API Keys" },
+  { href: "/dashboard/documents", label: "Documents" },
 ]
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   return (

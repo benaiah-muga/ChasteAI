@@ -5,7 +5,18 @@ import { DashboardClient } from "./dashboard-client"
 export default async function DashboardPage() {
   const ctx = await createTRPCContext()
   const caller = appRouter.createCaller(ctx)
-  const workspaces = await caller.workspace.list()
 
-  return <DashboardClient workspaces={workspaces} />
+  const [workspaces, stats, recentConversations] = await Promise.all([
+    caller.workspace.list(),
+    caller.dashboard.stats(),
+    caller.dashboard.recentConversations(),
+  ])
+
+  return (
+    <DashboardClient
+      workspaces={workspaces}
+      stats={stats}
+      recentConversations={recentConversations}
+    />
+  )
 }
