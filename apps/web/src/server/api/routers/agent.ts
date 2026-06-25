@@ -136,6 +136,10 @@ export const agentRouter = router({
         .where(eq(agents.id, input.id))
         .returning()
 
+      if (!agent) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" })
+      }
+
       return agent
     }),
 
@@ -163,30 +167,33 @@ export const agentRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" })
       }
 
-      const agentChannels = await ctx.db
-        .select({ id: channels.id })
-        .from(channels)
-        .where(eq(channels.agentId, input.id))
+      await ctx.db.transaction(async (tx) => {
+        const agentChannels = await tx
+          .select({ id: channels.id })
+          .from(channels)
+          .where(eq(channels.agentId, input.id))
 
-      const channelIds = agentChannels.map((c) => c.id)
+        const channelIds = agentChannels.map((c) => c.id)
 
-      if (channelIds.length > 0) {
-        const channelConversations = await ctx.db
-          .select({ id: conversations.id })
-          .from(conversations)
-          .where(inArray(conversations.channelId, channelIds))
+        if (channelIds.length > 0) {
+          const channelConversations = await tx
+            .select({ id: conversations.id })
+            .from(conversations)
+            .where(inArray(conversations.channelId, channelIds))
 
-        const conversationIds = channelConversations.map((c) => c.id)
+          const conversationIds = channelConversations.map((c) => c.id)
 
-        if (conversationIds.length > 0) {
-          await ctx.db.delete(messages).where(inArray(messages.conversationId, conversationIds))
-          await ctx.db.delete(conversations).where(inArray(conversations.id, conversationIds))
+          if (conversationIds.length > 0) {
+            await tx.delete(messages).where(inArray(messages.conversationId, conversationIds))
+            await tx.delete(conversations).where(inArray(conversations.id, conversationIds))
+          }
+
+          await tx.delete(channels).where(inArray(channels.id, channelIds))
         }
 
-        await ctx.db.delete(channels).where(inArray(channels.id, channelIds))
-      }
+        await tx.delete(agents).where(eq(agents.id, input.id))
+      })
 
-      await ctx.db.delete(agents).where(eq(agents.id, input.id))
       return { success: true }
     }),
 })
