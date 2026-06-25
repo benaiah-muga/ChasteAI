@@ -47,6 +47,9 @@ importers:
       '@chaste-ai/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@chaste-ai/rag':
+        specifier: workspace:*
+        version: link:../../packages/rag
       '@tanstack/react-query':
         specifier: ^5.101.1
         version: 5.101.1(react@19.2.7)
@@ -207,6 +210,28 @@ importers:
       tsx:
         specifier: ^4.19.0
         version: 4.22.4
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  packages/rag:
+    dependencies:
+      '@chaste-ai/ai':
+        specifier: workspace:*
+        version: link:../ai
+      '@chaste-ai/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: ^0.39.0
+        version: 0.39.3(@libsql/client@0.14.0)(@types/pg@8.20.0)(pg@8.22.0)
+    devDependencies:
+      '@chaste-ai/typescript-config':
+        specifier: workspace:*
+        version: link:../../tooling/typescript
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.0
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
