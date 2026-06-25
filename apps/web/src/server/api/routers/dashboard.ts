@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm"
+import { eq, inArray, sql, desc } from "drizzle-orm"
 import { agents, conversations, channels, messages, memberships } from "@chaste-ai/db"
 import { protectedProcedure, router } from "../trpc"
 
@@ -16,7 +16,7 @@ export const dashboardRouter = router({
     const workspaceIds = userWorkspaces.map((w) => w.workspaceId)
 
     const userAgents = await ctx.db
-      .select()
+      .select({ id: agents.id })
       .from(agents)
       .where(inArray(agents.workspaceId, workspaceIds))
 
@@ -28,7 +28,7 @@ export const dashboardRouter = router({
     }
 
     const userChannels = await ctx.db
-      .select()
+      .select({ id: channels.id })
       .from(channels)
       .where(inArray(channels.agentId, agentIds))
 
@@ -40,7 +40,7 @@ export const dashboardRouter = router({
     }
 
     const userConversations = await ctx.db
-      .select()
+      .select({ id: conversations.id })
       .from(conversations)
       .where(inArray(conversations.channelId, channelIds))
 
@@ -91,7 +91,7 @@ export const dashboardRouter = router({
       .select()
       .from(conversations)
       .where(inArray(conversations.channelId, channelIds))
-      .orderBy(conversations.updatedAt)
+      .orderBy(desc(conversations.updatedAt))
       .limit(10)
 
     const agentMap = new Map(userAgents.map((a) => [a.id, a.name]))

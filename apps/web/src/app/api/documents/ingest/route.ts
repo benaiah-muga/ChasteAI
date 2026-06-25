@@ -1,11 +1,17 @@
 import { NextRequest } from "next/server"
 import { getDatabaseClient } from "@chaste-ai/db"
-import { eq } from "drizzle-orm"
-import { documents, documentChunks } from "@chaste-ai/db"
+import { eq, and } from "drizzle-orm"
+import { z } from "zod"
+import { documents, documentChunks, memberships } from "@chaste-ai/db"
 import { createProvider, chunkText } from "@chaste-ai/ai"
 import { auth } from "@/auth"
 
 export const runtime = "nodejs"
+
+const ingestBodySchema = z.object({
+  documentId: z.string().uuid(),
+  content: z.string().min(1),
+})
 
 export async function POST(req: NextRequest, _props: { params: Promise<Record<string, string>> }) {
   const session = await auth()
@@ -14,15 +20,11 @@ export async function POST(req: NextRequest, _props: { params: Promise<Record<st
     return new Response("Unauthorized", { status: 401 })
   }
 
-  let body: { documentId: string; content?: string }
+  let body: z.infer<typeof ingestBodySchema>
   try {
-    body = await req.json()
+    body = ingestBodySchema.parse(await req.json())
   } catch {
     return new Response("Invalid JSON", { status: 400 })
-  }
-
-  if (!body.documentId || !body.content) {
-    return new Response("documentId and content are required", { status: 400 })
   }
 
   const db = getDatabaseClient()
@@ -31,6 +33,21 @@ export async function POST(req: NextRequest, _props: { params: Promise<Record<st
 
   if (!doc) {
     return new Response("Document not found", { status: 404 })
+  }
+
+  const [membership] = await db
+    .select()
+    .from(memberships)
+    .where(
+      and(
+        eq(memberships.workspaceId, doc.workspaceId),
+        eq(memberships.userId, session.user.id),
+      ),
+    )
+    .limit(1)
+
+  if (!membership) {
+    return new Response("Forbidden", { status: 403 })
   }
 
   await db.update(documents).set({ status: "processing" }).where(eq(documents.id, body.documentId))
@@ -68,11 +85,12 @@ export async function POST(req: NextRequest, _props: { params: Promise<Record<st
       })
     }
 
-    if (chunkRecords.length > 0) {
-      await db.insert(documentChunks).values(chunkRecords)
-    }
-
-    await db.update(documents).set({ status: "ready" }).where(eq(documents.id, body.documentId))
+    await db.transaction(async (tx) => {
+      if (chunkRecords.length > 0) {
+        await tx.insert(documentChunks).values(chunkRecords)
+      }
+      await tx.update(documents).set({ status: "ready" }).where(eq(documents.id, body.documentId))
+    })
 
     return new Response(JSON.stringify({ success: true, chunkCount: chunkRecords.length }), {
       headers: { "Content-Type": "application/json" },

@@ -61,11 +61,18 @@ export const documentRouter = router({
         .limit(1)
 
       if (!membership) {
-        throw new TRPCError({ code: "FORBIDDEN" })
+        throw new TRPCError({ code: "NOT_FOUND" })
       }
 
       const chunks = await ctx.db
-        .select()
+        .select({
+          id: documentChunks.id,
+          documentId: documentChunks.documentId,
+          content: documentChunks.content,
+          chunkIndex: documentChunks.chunkIndex,
+          metadata: documentChunks.metadata,
+          createdAt: documentChunks.createdAt,
+        })
         .from(documentChunks)
         .where(eq(documentChunks.documentId, doc.id))
         .orderBy(documentChunks.chunkIndex)

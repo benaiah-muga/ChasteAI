@@ -34,7 +34,15 @@ export const apiKeyRouter = router({
     const workspaceIds = userWorkspaces.map((w) => w.workspaceId)
 
     return ctx.db
-      .select()
+      .select({
+        id: apiKeys.id,
+        workspaceId: apiKeys.workspaceId,
+        name: apiKeys.name,
+        keyPrefix: apiKeys.keyPrefix,
+        scopes: apiKeys.scopes,
+        expiresAt: apiKeys.expiresAt,
+        createdAt: apiKeys.createdAt,
+      })
       .from(apiKeys)
       .where(inArray(apiKeys.workspaceId, workspaceIds))
       .orderBy(apiKeys.createdAt)
@@ -61,10 +69,11 @@ export const apiKeyRouter = router({
         .limit(1)
 
       if (!membership) {
-        throw new TRPCError({ code: "FORBIDDEN" })
+        throw new TRPCError({ code: "NOT_FOUND" })
       }
 
-      return key
+      const { keyHash: _kh, ...keyDto } = key
+      return keyDto
     }),
 
   create: protectedProcedure.input(insertApiKeySchema).mutation(async ({ ctx, input }) => {
@@ -79,7 +88,7 @@ export const apiKeyRouter = router({
       )
       .limit(1)
 
-    if (!membership) {
+    if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
       throw new TRPCError({ code: "FORBIDDEN" })
     }
 
@@ -137,7 +146,7 @@ export const apiKeyRouter = router({
         )
         .limit(1)
 
-      if (!membership) {
+      if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
         throw new TRPCError({ code: "FORBIDDEN" })
       }
 
@@ -146,6 +155,10 @@ export const apiKeyRouter = router({
       if (input.data.scopes !== undefined) updateData.scopes = input.data.scopes
       if (input.data.expiresAt !== undefined) {
         updateData.expiresAt = input.data.expiresAt ? new Date(input.data.expiresAt) : null
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No fields to update" })
       }
 
       const [key] = await ctx.db
@@ -158,7 +171,8 @@ export const apiKeyRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" })
       }
 
-      return key
+      const { keyHash: _kh, ...keyDto } = key
+      return keyDto
     }),
 
   delete: protectedProcedure
@@ -185,7 +199,7 @@ export const apiKeyRouter = router({
         )
         .limit(1)
 
-      if (!membership) {
+      if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
         throw new TRPCError({ code: "FORBIDDEN" })
       }
 

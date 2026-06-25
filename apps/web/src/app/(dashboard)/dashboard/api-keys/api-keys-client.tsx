@@ -16,14 +16,31 @@ function KeyCreatedModal({
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(rawKey)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(rawKey)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard write failed — silently ignore
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Escape") onClose()
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onKeyDown={handleKeyDown}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="key-created-title"
+        className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+      >
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#eef2ff]">
           <svg
             className="h-6 w-6 text-[#6366f1]"
@@ -39,7 +56,9 @@ function KeyCreatedModal({
             />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold text-[#0f172a]">API Key Created</h3>
+        <h3 id="key-created-title" className="text-lg font-semibold text-[#0f172a]">
+          API Key Created
+        </h3>
         <p className="mt-1 text-sm text-[#64748b]">
           Your key <strong>{name}</strong> is ready. Copy it now — you won&apos;t be able to see it
           again.

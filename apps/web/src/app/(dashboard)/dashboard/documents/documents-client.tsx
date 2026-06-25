@@ -201,11 +201,12 @@ function UploadForm({ onDone }: { onDone: () => void }) {
           const err = await res.json()
           throw new Error(err.error || "Ingestion failed")
         }
+
+        onDone()
       } catch (e) {
         setError((e as Error).message)
       } finally {
         setIsIngesting(false)
-        onDone()
       }
     },
   })
