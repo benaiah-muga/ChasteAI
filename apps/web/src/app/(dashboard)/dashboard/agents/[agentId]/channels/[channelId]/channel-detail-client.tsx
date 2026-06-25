@@ -56,7 +56,7 @@ export function ChannelDetailClient({
     e.preventDefault()
     updateChannel.mutate({
       id: initial.id,
-      data: { name, isActive, config: initial.config ?? {} },
+      data: { name, isActive },
     })
   }
 
@@ -68,8 +68,9 @@ export function ChannelDetailClient({
 
   const origin = typeof window !== "undefined" ? window.location.origin : ""
 
-  const embedCode = initial.type === "widget"
-    ? `<script>
+  const embedCode =
+    initial.type === "widget"
+      ? `<script>
   (function(w,d,s,o,f){
     w['ChasteAI']=f;w[f]=w[f]||function(){(w[f].q=w[f].q||[]).push(arguments)};
     var g=d.createElement(s),r=d.getElementsByTagName(s)[0];
@@ -77,7 +78,7 @@ export function ChannelDetailClient({
   })(window,document,'script','${origin}/widget/embed.js','chasteai');
   chasteai('init', '${initial.id}');
 </script>`
-    : null
+      : null
 
   if (isEditing) {
     return (
@@ -88,7 +89,9 @@ export function ChannelDetailClient({
         </div>
         <form onSubmit={handleSave} className="space-y-6">
           <div>
-            <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-[#0f172a]">Name</label>
+            <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+              Name
+            </label>
             <input
               id="name"
               type="text"
@@ -99,7 +102,9 @@ export function ChannelDetailClient({
             />
           </div>
           <div>
-            <label htmlFor="is-active" className="mb-1.5 block text-sm font-medium text-[#0f172a]">Status</label>
+            <label htmlFor="is-active" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+              Status
+            </label>
             <select
               id="is-active"
               value={isActive}
@@ -118,7 +123,13 @@ export function ChannelDetailClient({
             >
               {updateChannel.isPending ? "Saving..." : "Save"}
             </button>
-            <button type="button" onClick={() => setIsEditing(false)} className="text-sm font-medium text-[#64748b] hover:text-[#0f172a]">Cancel</button>
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="text-sm font-medium text-[#64748b] hover:text-[#0f172a]"
+            >
+              Cancel
+            </button>
           </div>
         </form>
       </div>
@@ -132,8 +143,18 @@ export function ChannelDetailClient({
           href={`/dashboard/agents/${agentId}/channels`}
           className="mb-4 inline-flex items-center gap-1 text-xs font-medium text-[#64748b] hover:text-[#0f172a]"
         >
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+          <svg
+            className="h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+            />
           </svg>
           Back to channels
         </Link>
@@ -144,8 +165,12 @@ export function ChannelDetailClient({
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold tracking-tight text-[#0f172a]">{initial.name}</h1>
-                <span className="rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-medium text-[#64748b]">{initial.type}</span>
+                <h1 className="text-xl font-semibold tracking-tight text-[#0f172a]">
+                  {initial.name}
+                </h1>
+                <span className="rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-medium text-[#64748b]">
+                  {initial.type}
+                </span>
                 {initial.isActive === "true" ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f0fdf4] px-2.5 py-0.5 text-xs font-medium text-[#16a34a]">
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
@@ -176,12 +201,20 @@ export function ChannelDetailClient({
               <dd className="mt-1 capitalize text-[#0f172a]">{initial.type}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-[#94a3b8]">Created</dt>
-              <dd className="mt-1 text-[#0f172a]">{new Date(initial.createdAt).toLocaleDateString()}</dd>
+              <dt className="text-xs font-medium uppercase tracking-wider text-[#94a3b8]">
+                Created
+              </dt>
+              <dd className="mt-1 text-[#0f172a]">
+                {new Date(initial.createdAt).toLocaleDateString()}
+              </dd>
             </div>
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-[#94a3b8]">Updated</dt>
-              <dd className="mt-1 text-[#0f172a]">{new Date(initial.updatedAt).toLocaleDateString()}</dd>
+              <dt className="text-xs font-medium uppercase tracking-wider text-[#94a3b8]">
+                Updated
+              </dt>
+              <dd className="mt-1 text-[#0f172a]">
+                {new Date(initial.updatedAt).toLocaleDateString()}
+              </dd>
             </div>
           </div>
         </div>

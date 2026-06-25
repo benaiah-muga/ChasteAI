@@ -28,9 +28,7 @@ function MessageBubble({ message }: { message: Message }) {
       >
         <p className="whitespace-pre-wrap">{message.content}</p>
         <p
-          className={`mt-1 text-right text-[10px] ${
-            isUser ? "text-[#c7d2fe]" : "text-[#94a3b8]"
-          }`}
+          className={`mt-1 text-right text-[10px] ${isUser ? "text-[#c7d2fe]" : "text-[#94a3b8]"}`}
         >
           {new Date(message.createdAt).toLocaleTimeString([], {
             hour: "2-digit",
@@ -102,13 +100,15 @@ export function ChatView({
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
         let fullContent = ""
+        let buffer = ""
 
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value, { stream: true })
-          const lines = chunk.split("\n")
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split("\n")
+          buffer = lines.pop() ?? ""
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
@@ -158,8 +158,18 @@ export function ChatView({
             href={`/dashboard/agents/${agentId}/conversations`}
             className="inline-flex items-center gap-1 text-xs font-medium text-[#64748b] hover:text-[#0f172a]"
           >
-            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            <svg
+              className="h-3 w-3"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+              />
             </svg>
             Back
           </Link>
@@ -206,16 +216,37 @@ export function ChatView({
             {isStreaming ? (
               <span className="flex items-center gap-1.5">
                 <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
                 </svg>
                 Sending
               </span>
             ) : (
               <>
                 Send
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"
+                  />
                 </svg>
               </>
             )}

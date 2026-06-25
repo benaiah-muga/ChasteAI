@@ -3,13 +3,14 @@ export const runtime = "nodejs"
 export async function GET() {
   const script = `
 (function() {
-  var channelId = document.currentScript.getAttribute('data-channel');
+  var channelId = (window.chasteai && window.chasteai.q && window.chasteai.q[0] && window.chasteai.q[0][1]) || (document.currentScript && document.currentScript.getAttribute('data-channel'));
   if (!channelId) {
-    console.error('ChasteAI widget: missing data-channel attribute');
+    console.error('ChasteAI widget: missing channel ID. Use chasteai("init", "CHANNEL_ID") or data-channel attribute.');
     return;
   }
 
-  var origin = window.location.origin;
+  var scriptSrc = document.currentScript && document.currentScript.src;
+  var origin = scriptSrc ? scriptSrc.substring(0, scriptSrc.lastIndexOf('/widget/embed.js')) : window.location.origin;
   var existing = document.getElementById('chasteai-widget-container');
   if (existing) return;
 

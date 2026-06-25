@@ -5,18 +5,14 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/trpc/react"
 
-export function NewAgentForm({
-  workspaces,
-}: {
-  workspaces: { id: string; name: string }[]
-}) {
+export function NewAgentForm({ workspaces }: { workspaces: { id: string; name: string }[] }) {
   const router = useRouter()
   const utils = api.useUtils()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [systemPrompt, setSystemPrompt] = useState("")
   const [workspaceId, setWorkspaceId] = useState(workspaces[0]?.id ?? "")
-  const [status, setStatus] = useState("draft")
+  const [status, setStatus] = useState<"active" | "inactive" | "draft">("draft")
   const [model, setModel] = useState("gpt-4o")
 
   const createAgent = api.agent.create.useMutation({
@@ -121,7 +117,7 @@ export function NewAgentForm({
           <select
             id="status"
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => setStatus(e.target.value as "active" | "inactive" | "draft")}
             className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none transition-colors focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
           >
             <option value="draft">Draft</option>
@@ -143,7 +139,8 @@ export function NewAgentForm({
             placeholder="gpt-4o"
           />
           <p className="mt-1 text-xs text-[#94a3b8]">
-            Provider: OpenAI. Set <code className="font-mono text-[#64748b]">OPENAI_API_KEY</code> in your environment.
+            Provider: OpenAI. Set <code className="font-mono text-[#64748b]">OPENAI_API_KEY</code>{" "}
+            in your environment.
           </p>
         </div>
       </div>

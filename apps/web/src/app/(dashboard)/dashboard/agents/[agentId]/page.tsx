@@ -1,6 +1,7 @@
 import { appRouter } from "@/server/api/root"
 import { createTRPCContext } from "@/server/api/trpc"
 import { notFound, redirect } from "next/navigation"
+import { TRPCError } from "@trpc/server"
 import { AgentDetailClient } from "./agent-detail-client"
 
 export default async function AgentDetailPage({
@@ -20,8 +21,11 @@ export default async function AgentDetailPage({
   let agent
   try {
     agent = await caller.agent.getById({ id: agentId })
-  } catch {
-    notFound()
+  } catch (error) {
+    if (error instanceof TRPCError && error.code === "NOT_FOUND") {
+      notFound()
+    }
+    throw error
   }
 
   return <AgentDetailClient agent={agent} />

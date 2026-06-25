@@ -25,8 +25,12 @@ function StatusBadge({ status }: { status: string }) {
   }
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${colorMap[status] ?? colorMap.draft}`}>
-      <span className={`inline-block h-1.5 w-1.5 rounded-full ${status === "active" ? "bg-[#22c55e]" : status === "draft" ? "bg-[#f59e0b]" : "bg-[#94a3b8]"}`} />
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${colorMap[status] ?? colorMap.draft}`}
+    >
+      <span
+        className={`inline-block h-1.5 w-1.5 rounded-full ${status === "active" ? "bg-[#22c55e]" : status === "draft" ? "bg-[#f59e0b]" : "bg-[#94a3b8]"}`}
+      />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   )
@@ -40,7 +44,9 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
   const [name, setName] = useState(initial.name)
   const [description, setDescription] = useState(initial.description ?? "")
   const [systemPrompt, setSystemPrompt] = useState(initial.systemPrompt ?? "")
-  const [status, setStatus] = useState(initial.status)
+  const [status, setStatus] = useState<"active" | "inactive" | "draft">(
+    initial.status as "active" | "inactive" | "draft",
+  )
   const [model, setModel] = useState((initial.providerConfig?.model as string) ?? "gpt-4o")
 
   const updateAgent = api.agent.update.useMutation({
@@ -74,7 +80,8 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
   }
 
   async function handleToggleStatus() {
-    const newStatus = initial.status === "active" ? "inactive" : "active"
+    const newStatus = status === "active" ? "inactive" : "active"
+    setStatus(newStatus)
     updateAgent.mutate({
       id: initial.id,
       data: { status: newStatus },
@@ -91,12 +98,8 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
     return (
       <div className="mx-auto max-w-2xl px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-[#0f172a]">
-            Edit agent
-          </h1>
-          <p className="mt-1 text-sm text-[#64748b]">
-            Update your agent&apos;s configuration.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[#0f172a]">Edit agent</h1>
+          <p className="mt-1 text-sm text-[#64748b]">Update your agent&apos;s configuration.</p>
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
@@ -121,7 +124,10 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
           </div>
 
           <div>
-            <label htmlFor="description" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+            <label
+              htmlFor="description"
+              className="mb-1.5 block text-sm font-medium text-[#0f172a]"
+            >
               Description
             </label>
             <input
@@ -134,7 +140,10 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
           </div>
 
           <div>
-            <label htmlFor="system-prompt" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+            <label
+              htmlFor="system-prompt"
+              className="mb-1.5 block text-sm font-medium text-[#0f172a]"
+            >
               System prompt
             </label>
             <textarea
@@ -154,7 +163,7 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
               <select
                 id="status"
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => setStatus(e.target.value as "active" | "inactive" | "draft")}
                 className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none transition-colors focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
               >
                 <option value="draft">Draft</option>
@@ -205,8 +214,18 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
           href="/dashboard/agents"
           className="mb-4 inline-flex items-center gap-1 text-xs font-medium text-[#64748b] hover:text-[#0f172a]"
         >
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+          <svg
+            className="h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+            />
           </svg>
           Back to agents
         </Link>
@@ -231,7 +250,7 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
                 onClick={handleToggleStatus}
                 className="rounded-lg border border-[#e2e8f0] px-3 py-1.5 text-xs font-medium text-[#64748b] transition-colors hover:bg-[#f8fafc] hover:text-[#0f172a]"
               >
-                {initial.status === "active" ? "Deactivate" : "Activate"}
+                {status === "active" ? "Deactivate" : "Activate"}
               </button>
               <button
                 onClick={() => setIsEditing(true)}
@@ -250,15 +269,15 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
                 Provider
               </dt>
               <dd className="mt-1 text-[#0f172a]">
-                {(initial.providerConfig?.provider as string) === "openai" ? "OpenAI" : initial.providerConfig?.provider as string}
+                {(initial.providerConfig?.provider as string) === "openai"
+                  ? "OpenAI"
+                  : (initial.providerConfig?.provider as string)}
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-[#94a3b8]">
-                Model
-              </dt>
+              <dt className="text-xs font-medium uppercase tracking-wider text-[#94a3b8]">Model</dt>
               <dd className="mt-1 font-mono text-xs text-[#0f172a]">
-                {initial.providerConfig?.model as string ?? "gpt-4o"}
+                {(initial.providerConfig?.model as string) ?? "gpt-4o"}
               </dd>
             </div>
             <div>
@@ -295,7 +314,9 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
       <div className="mt-6 flex items-center justify-between rounded-xl border border-[#e2e8f0] bg-white px-6 py-4">
         <div>
           <h3 className="text-sm font-medium text-[#0f172a]">Conversations</h3>
-          <p className="text-xs text-[#64748b]">View and manage conversations handled by this agent.</p>
+          <p className="text-xs text-[#64748b]">
+            View and manage conversations handled by this agent.
+          </p>
         </div>
         <Link
           href={`/dashboard/agents/${initial.id}/conversations`}

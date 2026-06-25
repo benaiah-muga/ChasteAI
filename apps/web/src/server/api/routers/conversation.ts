@@ -7,9 +7,11 @@ import { protectedProcedure, router } from "../trpc"
 export const conversationRouter = router({
   list: protectedProcedure
     .input(
-      z.object({
-        agentId: z.string().uuid().optional(),
-      }).optional(),
+      z
+        .object({
+          agentId: z.string().uuid().optional(),
+        })
+        .optional(),
     )
     .query(async ({ ctx, input }) => {
       const userWorkspaces = await ctx.db
@@ -140,37 +142,40 @@ export const conversationRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" })
       }
 
-      let [channel] = await ctx.db
-        .select()
-        .from(channels)
-        .where(
-          and(eq(channels.agentId, input.agentId), eq(channels.type, "web")),
-        )
-        .limit(1)
+      const result = await ctx.db.transaction(async (tx) => {
+        let [channel] = await tx
+          .select()
+          .from(channels)
+          .where(and(eq(channels.agentId, input.agentId), eq(channels.type, "web")))
+          .limit(1)
+          .for("update")
 
-      if (!channel) {
-        ;[channel] = await ctx.db
-          .insert(channels)
+        if (!channel) {
+          ;[channel] = await tx
+            .insert(channels)
+            .values({
+              agentId: input.agentId,
+              type: "web",
+              name: `${agent.name} Web`,
+            })
+            .returning()
+        }
+
+        if (!channel) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+        }
+
+        const [conversation] = await tx
+          .insert(conversations)
           .values({
-            agentId: input.agentId,
-            type: "web",
-            name: `${agent.name} Web`,
+            channelId: channel.id,
+            externalUserId: input.externalUserId ?? ctx.session.user.id,
           })
           .returning()
-      }
 
-      if (!channel) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-      }
+        return conversation
+      })
 
-      const [conversation] = await ctx.db
-        .insert(conversations)
-        .values({
-          channelId: channel.id,
-          externalUserId: input.externalUserId ?? ctx.session.user.id,
-        })
-        .returning()
-
-      return conversation
+      return result
     }),
 })

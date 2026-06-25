@@ -13,11 +13,7 @@ export async function POST(
   const { channelId, conversationId } = await params
   const db = getDatabaseClient()
 
-  const [channel] = await db
-    .select()
-    .from(channels)
-    .where(eq(channels.id, channelId))
-    .limit(1)
+  const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1)
 
   if (!channel || channel.isActive !== "true") {
     return new Response("Channel not found or inactive", { status: 404 })
@@ -33,18 +29,19 @@ export async function POST(
     return new Response("Conversation not found", { status: 404 })
   }
 
-  const body = await req.json()
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch {
+    return new Response("Invalid JSON body", { status: 400 })
+  }
   const content = body?.content as string | undefined
 
   if (!content || typeof content !== "string" || content.trim().length === 0) {
     return new Response("Content is required", { status: 400 })
   }
 
-  const [agent] = await db
-    .select()
-    .from(agents)
-    .where(eq(agents.id, channel.agentId))
-    .limit(1)
+  const [agent] = await db.select().from(agents).where(eq(agents.id, channel.agentId)).limit(1)
 
   if (!agent) {
     return new Response("Agent not found", { status: 404 })
@@ -52,18 +49,22 @@ export async function POST(
 
   const provider = createProvider({
     type: (agent.providerConfig?.provider as string) ?? "openai",
-    apiKey:
-      (agent.providerConfig?.apiKey as string) ?? process.env.OPENAI_API_KEY,
+    apiKey: (agent.providerConfig?.apiKey as string) ?? process.env.OPENAI_API_KEY,
     model: (agent.providerConfig?.model as string) ?? "gpt-4o",
   })
 
   const model = (agent.providerConfig?.model as string) ?? "gpt-4o"
 
-  await db.insert(messages).values({
-    conversationId,
-    role: "user",
-    content: content.trim(),
-  })
+  const [insertedUser] = await db
+    .insert(messages)
+    .values({
+      conversationId,
+      role: "user",
+      content: content.trim(),
+    })
+    .returning()
+
+  const userMessageId = insertedUser?.id ?? null
 
   const history = await db
     .select()
@@ -72,9 +73,7 @@ export async function POST(
     .orderBy(messages.createdAt)
 
   const chatMessages = [
-    ...(agent.systemPrompt
-      ? [{ role: "system" as const, content: agent.systemPrompt }]
-      : []),
+    ...(agent.systemPrompt ? [{ role: "system" as const, content: agent.systemPrompt }] : []),
     ...history.map((m) => ({
       role: m.role as "user" | "assistant" | "system",
       content: m.content,
@@ -112,7 +111,7 @@ export async function POST(
         await db
           .update(conversations)
           .set({
-            messageCount: history.length + 2,
+            messageCount: history.length + 1,
             status: "active",
             updatedAt: new Date(),
           })
@@ -124,10 +123,14 @@ export async function POST(
           ),
         )
       } catch (error) {
+        if (userMessageId) {
+          await db
+            .delete(messages)
+            .where(eq(messages.id, userMessageId))
+            .catch(() => {})
+        }
         controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ error: "AI provider error" })}\n\n`,
-          ),
+          encoder.encode(`data: ${JSON.stringify({ error: "AI provider error" })}\n\n`),
         )
       } finally {
         controller.close()

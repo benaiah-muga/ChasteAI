@@ -84,13 +84,17 @@ export function WidgetChat() {
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
         let fullContent = ""
+        let buffer = ""
 
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value, { stream: true })
-          for (const line of chunk.split("\n")) {
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split("\n")
+          buffer = lines.pop() ?? ""
+
+          for (const line of lines) {
             if (!line.startsWith("data: ")) continue
             const data = JSON.parse(line.slice(6))
             if (data.token) {
@@ -102,6 +106,8 @@ export function WidgetChat() {
                 { id: data.messageId, role: "assistant", content: fullContent },
               ])
               setStreamingContent("")
+            } else if (data.error) {
+              throw new Error(data.error)
             }
           }
         }
@@ -123,7 +129,15 @@ export function WidgetChat() {
 
   if (error) {
     return (
-      <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          height: "100%",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+        }}
+      >
         <p style={{ fontSize: 14, color: "#ef4444", textAlign: "center" }}>{error}</p>
       </div>
     )
@@ -132,10 +146,22 @@ export function WidgetChat() {
   if (!started) {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+        <div
+          style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}
+        >
           <p style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>Chat</p>
         </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, gap: 12 }}>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            gap: 12,
+          }}
+        >
           <p style={{ fontSize: 14, color: "#64748b", textAlign: "center" }}>
             Have a question? Start a conversation.
           </p>
@@ -161,7 +187,9 @@ export function WidgetChat() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+      <div
+        style={{ padding: "12px 16px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}
+      >
         <p style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>Chat</p>
       </div>
 
@@ -207,7 +235,16 @@ export function WidgetChat() {
                 }}
               >
                 {streamingContent}
-                <span style={{ display: "inline-block", width: 6, height: 14, marginLeft: 2, background: "#6366f1", animation: "pulse 1s infinite" }} />
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 6,
+                    height: 14,
+                    marginLeft: 2,
+                    background: "#6366f1",
+                    animation: "pulse 1s infinite",
+                  }}
+                />
               </div>
             </div>
           )}

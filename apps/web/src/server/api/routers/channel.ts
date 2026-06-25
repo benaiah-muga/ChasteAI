@@ -1,11 +1,14 @@
 import { z } from "zod"
 import { eq, and } from "drizzle-orm"
-import { channels, agents, memberships } from "@chaste-ai/db"
+import { channels, channelTypes, agents, memberships } from "@chaste-ai/db"
 import { createInsertSchema } from "drizzle-zod"
 import { TRPCError } from "@trpc/server"
 import { protectedProcedure, router } from "../trpc"
 
-const insertChannelSchema = createInsertSchema(channels).pick({
+const insertChannelSchema = createInsertSchema(channels, {
+  type: z.enum(channelTypes),
+  config: z.record(z.unknown()).optional(),
+}).pick({
   agentId: true,
   type: true,
   name: true,
@@ -13,7 +16,7 @@ const insertChannelSchema = createInsertSchema(channels).pick({
   isActive: true,
 })
 
-const updateChannelSchema = insertChannelSchema.partial()
+const updateChannelSchema = insertChannelSchema.partial().omit({ agentId: true })
 
 export const channelRouter = router({
   list: protectedProcedure
@@ -92,50 +95,43 @@ export const channelRouter = router({
       return channel
     }),
 
-  create: protectedProcedure
-    .input(insertChannelSchema)
-    .mutation(async ({ ctx, input }) => {
-      const [agent] = await ctx.db
-        .select()
-        .from(agents)
-        .where(eq(agents.id, input.agentId))
-        .limit(1)
+  create: protectedProcedure.input(insertChannelSchema).mutation(async ({ ctx, input }) => {
+    const [agent] = await ctx.db.select().from(agents).where(eq(agents.id, input.agentId)).limit(1)
 
-      if (!agent) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" })
-      }
+    if (!agent) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" })
+    }
 
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, agent.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
+    const [membership] = await ctx.db
+      .select()
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.workspaceId, agent.workspaceId),
+          eq(memberships.userId, ctx.session.user.id),
+        ),
+      )
+      .limit(1)
 
-      if (!membership) {
-        throw new TRPCError({ code: "FORBIDDEN" })
-      }
+    if (!membership) {
+      throw new TRPCError({ code: "FORBIDDEN" })
+    }
 
-      const [channel] = await ctx.db
-        .insert(channels)
-        .values({
-          ...input,
-          type: input.type as "web" | "widget" | "api" | "slack" | "discord",
-          isActive: input.isActive ?? "true",
-          config: input.config ?? {},
-        })
-        .returning()
+    const [channel] = await ctx.db
+      .insert(channels)
+      .values({
+        ...input,
+        isActive: input.isActive ?? "true",
+        config: input.config ?? {},
+      })
+      .returning()
 
-      if (!channel) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-      }
+    if (!channel) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+    }
 
-      return channel
-    }),
+    return channel
+  }),
 
   update: protectedProcedure
     .input(
@@ -182,10 +178,7 @@ export const channelRouter = router({
 
       const [channel] = await ctx.db
         .update(channels)
-        .set({
-          ...input.data,
-          type: input.data.type as "web" | "widget" | "api" | "slack" | "discord" | undefined,
-        })
+        .set(input.data)
         .where(eq(channels.id, input.id))
         .returning()
 

@@ -31,11 +31,9 @@ export default async function ChannelDetailPage({
     notFound()
   }
 
-  return (
-    <ChannelDetailClient
-      agent={agent}
-      channel={channel}
-      agentId={agentId}
-    />
-  )
+  if (channel.agentId !== agentId) {
+    notFound()
+  }
+
+  return <ChannelDetailClient agent={agent} channel={channel} agentId={agentId} />
 }

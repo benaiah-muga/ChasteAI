@@ -1,11 +1,21 @@
 import { z } from "zod"
 import { eq, and, inArray } from "drizzle-orm"
-import { agents, memberships } from "@chaste-ai/db"
+import {
+  agents,
+  agentStatuses,
+  channels,
+  conversations,
+  messages,
+  memberships,
+} from "@chaste-ai/db"
 import { createInsertSchema } from "drizzle-zod"
 import { TRPCError } from "@trpc/server"
 import { protectedProcedure, router } from "../trpc"
 
-const insertAgentSchema = createInsertSchema(agents).pick({
+const insertAgentSchema = createInsertSchema(agents, {
+  status: z.enum(agentStatuses),
+  providerConfig: z.record(z.unknown()),
+}).pick({
   name: true,
   description: true,
   systemPrompt: true,
@@ -36,11 +46,7 @@ export const agentRouter = router({
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const [agent] = await ctx.db
-        .select()
-        .from(agents)
-        .where(eq(agents.id, input.id))
-        .limit(1)
+      const [agent] = await ctx.db.select().from(agents).where(eq(agents.id, input.id)).limit(1)
 
       if (!agent) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" })
@@ -86,13 +92,7 @@ export const agentRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" })
       }
 
-      const [agent] = await ctx.db
-        .insert(agents)
-        .values({
-          ...input,
-          status: input.status as "active" | "inactive" | "draft",
-        })
-        .returning()
+      const [agent] = await ctx.db.insert(agents).values(input).returning()
 
       if (!agent) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
@@ -109,11 +109,7 @@ export const agentRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const [existing] = await ctx.db
-        .select()
-        .from(agents)
-        .where(eq(agents.id, input.id))
-        .limit(1)
+      const [existing] = await ctx.db.select().from(agents).where(eq(agents.id, input.id)).limit(1)
 
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND" })
@@ -136,10 +132,7 @@ export const agentRouter = router({
 
       const [agent] = await ctx.db
         .update(agents)
-        .set({
-          ...input.data,
-          status: input.data.status as "active" | "inactive" | "draft" | undefined,
-        })
+        .set(input.data)
         .where(eq(agents.id, input.id))
         .returning()
 
@@ -149,11 +142,7 @@ export const agentRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const [existing] = await ctx.db
-        .select()
-        .from(agents)
-        .where(eq(agents.id, input.id))
-        .limit(1)
+      const [existing] = await ctx.db.select().from(agents).where(eq(agents.id, input.id)).limit(1)
 
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND" })
@@ -172,6 +161,29 @@ export const agentRouter = router({
 
       if (!membership) {
         throw new TRPCError({ code: "FORBIDDEN" })
+      }
+
+      const agentChannels = await ctx.db
+        .select({ id: channels.id })
+        .from(channels)
+        .where(eq(channels.agentId, input.id))
+
+      const channelIds = agentChannels.map((c) => c.id)
+
+      if (channelIds.length > 0) {
+        const channelConversations = await ctx.db
+          .select({ id: conversations.id })
+          .from(conversations)
+          .where(inArray(conversations.channelId, channelIds))
+
+        const conversationIds = channelConversations.map((c) => c.id)
+
+        if (conversationIds.length > 0) {
+          await ctx.db.delete(messages).where(inArray(messages.conversationId, conversationIds))
+          await ctx.db.delete(conversations).where(inArray(conversations.id, conversationIds))
+        }
+
+        await ctx.db.delete(channels).where(inArray(channels.id, channelIds))
       }
 
       await ctx.db.delete(agents).where(eq(agents.id, input.id))
