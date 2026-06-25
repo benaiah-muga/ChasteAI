@@ -2,39 +2,16 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import type { inferRouterOutputs } from "@trpc/server"
+import type { AppRouter } from "@/server/api/root"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
 
-type Workspace = {
-  id: string
-  name: string
-  slug: string
-  createdAt: Date
-}
+type RouterOutput = inferRouterOutputs<AppRouter>
 
-type WorkspaceWithMembership = {
-  workspaces: Workspace
-  memberships: { id: string; role: string }
-}
-
-type Stats = {
-  agentCount: number
-  conversationCount: number
-  channelCount: number
-  messageCount: number
-}
-
-type RecentConversation = {
-  id: string
-  channelId: string
-  externalUserId: string | null
-  status: "active" | "waiting" | "resolved" | "closed"
-  metadata: Record<string, unknown> | null
-  messageCount: number
-  createdAt: Date
-  updatedAt: Date
-  agentName: string
-}
+type WorkspaceWithMembership = RouterOutput["workspace"]["list"][number]
+type Stats = RouterOutput["dashboard"]["stats"]
+type RecentConversation = RouterOutput["dashboard"]["recentConversations"][number]
 
 export function DashboardClient({
   workspaces: initial,

@@ -8,9 +8,11 @@ import { auth } from "@/auth"
 
 export const runtime = "nodejs"
 
+const MAX_CONTENT_SIZE = 1_000_000 // 1 MB
+
 const ingestBodySchema = z.object({
   documentId: z.string().uuid(),
-  content: z.string().min(1),
+  content: z.string().min(1).max(MAX_CONTENT_SIZE),
 })
 
 export async function POST(req: NextRequest, _props: { params: Promise<Record<string, string>> }) {
@@ -86,6 +88,7 @@ export async function POST(req: NextRequest, _props: { params: Promise<Record<st
     }
 
     await db.transaction(async (tx) => {
+      await tx.delete(documentChunks).where(eq(documentChunks.documentId, body.documentId))
       if (chunkRecords.length > 0) {
         await tx.insert(documentChunks).values(chunkRecords)
       }
