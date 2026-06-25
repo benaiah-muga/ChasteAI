@@ -1,5 +1,5 @@
 export { workspaces } from "./workspaces"
-export { users } from "./users"
+// User table managed by @auth/drizzle-adapter via schemas/auth.ts
 export { memberships, membershipRoles } from "./memberships"
 export type { MembershipRole } from "./memberships"
 export { agents, agentStatuses } from "./agents"
@@ -18,4 +18,5 @@ export type { SubscriptionPlan, SubscriptionStatus } from "./subscriptions"
 export { apiKeys, apiKeyScopes } from "./api-keys"
 export type { ApiKeyScope } from "./api-keys"
 export { analyticsEvents } from "./analytics-events"
-// Auth tables are managed by @auth/drizzle-adapter
+export { user, session, account, verificationToken } from "./auth"
+export type { User, Session, Account } from "./auth"

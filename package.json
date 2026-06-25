@@ -12,12 +12,17 @@
     "clean": "turbo clean && rm -rf node_modules",
     "db:generate": "pnpm --filter @chaste-ai/db db:generate",
     "db:migrate": "pnpm --filter @chaste-ai/db db:migrate",
-    "db:studio": "pnpm --filter @chaste-ai/db db:studio"
+    "db:studio": "pnpm --filter @chaste-ai/db db:studio",
+    "db:seed": "pnpm --filter @chaste-ai/db db:seed",
+    "adr:create": "bash scripts/adr-create.sh",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@chaste-ai/eslint-config": "workspace:*",
     "@chaste-ai/prettier-config": "workspace:*",
     "@chaste-ai/typescript-config": "workspace:*",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
     "prettier": "^3.4.0",
     "turbo": "^2.4.0",
     "typescript": "^5.7.0"

@@ -1,0 +1,8 @@
+#!/bin/bash
+# Husky pre-commit hook
+
+# Run ADR check
+bash "$(dirname "$0")/../scripts/adr-check.sh"
+
+# Run lint-staged
+npx lint-staged

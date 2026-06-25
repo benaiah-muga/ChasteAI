@@ -3,23 +3,31 @@ import superjson from "superjson"
 import { ZodError } from "zod"
 import { getDatabaseClient } from "@chaste-ai/db"
 import type { DatabaseClient } from "@chaste-ai/db"
+import { auth } from "@/auth"
 
-type CreateContextOptions = {
-  session: Session | null
+type Session = {
+  user: {
+    id: string
+    name?: string | null
+    email?: string | null
+    image?: string | null
+  }
+} | null
+
+export async function createInnerTRPCContext(opts: {
+  session: Session
   db: DatabaseClient
-}
-
-export async function createInnerTRPCContext(opts: CreateContextOptions) {
+}) {
   return {
     session: opts.session,
     db: opts.db,
   }
 }
 
-export async function createTRPCContext(_opts: { req: Request; resHeaders: Headers }) {
-  const session = null
+export async function createTRPCContext() {
+  const session = await auth()
   const db = getDatabaseClient()
-  return createInnerTRPCContext({ session, db })
+  return createInnerTRPCContext({ session: session as Session, db })
 }
 
 const t = initTRPC.context<typeof createInnerTRPCContext>().create({
@@ -51,12 +59,3 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
 })
 
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed)
-
-type Session = {
-  user: {
-    id: string
-    name?: string | null
-    email?: string | null
-    image?: string | null
-  }
-} | null

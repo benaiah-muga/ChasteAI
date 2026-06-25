@@ -13,6 +13,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
+    "db:seed": "tsx src/seed.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
@@ -28,6 +29,10 @@
     "@chaste-ai/typescript-config": "workspace:*",
     "@chaste-ai/eslint-config": "workspace:*",
     "typescript": "^5.7.0",
-    "eslint": "^9.0.0"
+    "eslint": "^9.0.0",
+    "bcryptjs": "^2.4.3",
+    "@types/bcryptjs": "^2.4.6",
+    "dotenv": "^16.4.0",
+    "tsx": "^4.19.0"
   }
 }
