@@ -1,0 +1,30 @@
+{
+  "name": "chaste-ai",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo clean && rm -rf node_modules",
+    "db:generate": "pnpm --filter @chaste-ai/db db:generate",
+    "db:migrate": "pnpm --filter @chaste-ai/db db:migrate",
+    "db:studio": "pnpm --filter @chaste-ai/db db:studio"
+  },
+  "devDependencies": {
+    "@chaste-ai/eslint-config": "workspace:*",
+    "@chaste-ai/prettier-config": "workspace:*",
+    "@chaste-ai/typescript-config": "workspace:*",
+    "prettier": "^3.4.0",
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@10.4.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  }
+}

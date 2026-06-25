@@ -1,0 +1,33 @@
+{
+  "name": "@chaste-ai/db",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:push": "drizzle-kit push",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.39.0",
+    "pg": "^8.13.0",
+    "drizzle-zod": "^0.6.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.0",
+    "@types/pg": "^8.11.0",
+    "@chaste-ai/typescript-config": "workspace:*",
+    "@chaste-ai/eslint-config": "workspace:*",
+    "typescript": "^5.7.0",
+    "eslint": "^9.0.0"
+  }
+}
