@@ -3,6 +3,7 @@ import { getDatabaseClient } from "@chaste-ai/db"
 import { eq, and } from "drizzle-orm"
 import { conversations, messages, channels, agents, memberships } from "@chaste-ai/db"
 import { createProvider } from "@chaste-ai/ai"
+import { retrieveRelevantChunks, buildContext } from "@chaste-ai/rag"
 import { auth } from "@/auth"
 
 export const runtime = "nodejs"
@@ -73,6 +74,18 @@ export async function POST(
     model,
   })
 
+  const agentConfig = agent.providerConfig as Record<string, unknown> | null
+  let ragContext = ""
+  if (agentConfig?.ragEnabled === true) {
+    try {
+      const ragOpts = { maxChunks: (agentConfig?.ragMaxChunks as number) ?? 3 }
+      const chunks = await retrieveRelevantChunks(db, agent.workspaceId, content.trim(), ragOpts)
+      ragContext = buildContext(chunks)
+    } catch {
+      // RAG error — proceed without context
+    }
+  }
+
   const [insertedUser] = await db
     .insert(messages)
     .values({
@@ -90,8 +103,16 @@ export async function POST(
     .where(eq(messages.conversationId, conversationId))
     .orderBy(messages.createdAt)
 
+  const systemMessages: { role: "system"; content: string }[] = []
+  if (agent.systemPrompt) {
+    systemMessages.push({ role: "system", content: agent.systemPrompt })
+  }
+  if (ragContext) {
+    systemMessages.push({ role: "system", content: ragContext })
+  }
+
   const chatMessages = [
-    ...(agent.systemPrompt ? [{ role: "system" as const, content: agent.systemPrompt }] : []),
+    ...systemMessages,
     ...history.map((m) => ({
       role: m.role as "user" | "assistant" | "system",
       content: m.content,

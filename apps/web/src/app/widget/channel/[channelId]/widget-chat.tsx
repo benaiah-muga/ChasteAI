@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 
 type Message = {
   id: string
@@ -14,10 +14,22 @@ function getApiOrigin() {
   return window.location.origin
 }
 
+function sendCloseMessage() {
+  if (typeof window !== "undefined" && window.parent !== window) {
+    window.parent.postMessage({ type: "chasteai-close" }, "*")
+  }
+}
+
 export function WidgetChat() {
   const params = useParams<{ channelId: string }>()
+  const searchParams = useSearchParams()
   const channelId = params.channelId
   const apiOrigin = getApiOrigin()
+
+  const color = searchParams.get("color") ?? "#6366f1"
+  const title = searchParams.get("title") ?? "Chat"
+  const greeting = searchParams.get("greeting") ?? ""
+  const agentName = searchParams.get("agentName") ?? ""
 
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -146,11 +158,7 @@ export function WidgetChat() {
   if (!started) {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div
-          style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}
-        >
-          <p style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>Chat</p>
-        </div>
+        <HeaderBar title={title} agentName={agentName} showClose />
         <div
           style={{
             flex: 1,
@@ -163,7 +171,7 @@ export function WidgetChat() {
           }}
         >
           <p style={{ fontSize: 14, color: "#64748b", textAlign: "center" }}>
-            Have a question? Start a conversation.
+            {greeting || "Have a question? Start a conversation."}
           </p>
           <button
             onClick={startConversation}
@@ -171,7 +179,7 @@ export function WidgetChat() {
               padding: "10px 24px",
               borderRadius: 8,
               border: "none",
-              background: "#6366f1",
+              background: color,
               color: "#fff",
               fontSize: 14,
               fontWeight: 500,
@@ -187,11 +195,7 @@ export function WidgetChat() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div
-        style={{ padding: "12px 16px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}
-      >
-        <p style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>Chat</p>
-      </div>
+      <HeaderBar title={title} agentName={agentName} showClose />
 
       <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -211,7 +215,7 @@ export function WidgetChat() {
                   fontSize: 14,
                   lineHeight: 1.5,
                   ...(msg.role === "user"
-                    ? { background: "#6366f1", color: "#fff" }
+                    ? { background: color, color: "#fff" }
                     : msg.role === "system"
                       ? { background: "#f1f5f9", color: "#ef4444" }
                       : { background: "#f1f5f9", color: "#0f172a" }),
@@ -241,7 +245,7 @@ export function WidgetChat() {
                     width: 6,
                     height: 14,
                     marginLeft: 2,
-                    background: "#6366f1",
+                    background: color,
                     animation: "pulse 1s infinite",
                   }}
                 />
@@ -277,7 +281,7 @@ export function WidgetChat() {
               padding: "8px 16px",
               borderRadius: 8,
               border: "none",
-              background: !input.trim() || isStreaming ? "#c7d2fe" : "#6366f1",
+              background: !input.trim() || isStreaming ? "#c7d2fe" : color,
               color: "#fff",
               fontSize: 14,
               fontWeight: 500,
@@ -288,6 +292,56 @@ export function WidgetChat() {
           </button>
         </form>
       </div>
+    </div>
+  )
+}
+
+function HeaderBar({
+  title,
+  agentName,
+  showClose,
+}: {
+  title: string
+  agentName: string
+  showClose?: boolean
+}) {
+  return (
+    <div
+      style={{
+        padding: "12px 16px",
+        borderBottom: "1px solid #e2e8f0",
+        background: "#f8fafc",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <div>
+        <p style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{title}</p>
+        {agentName && (
+          <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>{agentName}</p>
+        )}
+      </div>
+      {showClose && (
+        <button
+          onClick={sendCloseMessage}
+          aria-label="Close chat"
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            color: "#94a3b8",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      )}
     </div>
   )
 }
