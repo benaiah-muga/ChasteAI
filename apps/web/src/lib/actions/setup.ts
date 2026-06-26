@@ -98,7 +98,7 @@ export async function setupDbAction(data: {
   token?: string
 }) {
   try {
-    const { url } = data
+    const { url, token } = data
     const dialect = detectDialect(url)
 
     if (dialect === "postgresql") {
@@ -108,12 +108,13 @@ export async function setupDbAction(data: {
       client.release()
       await pool.end()
     } else {
-      const client = createClient({ url })
+      const client = createClient({ url, authToken: token })
       await client.execute("SELECT 1")
       client.close()
     }
 
     writeEnvVar("DATABASE_URL", url)
+    if (token) writeEnvVar("TURSO_AUTH_TOKEN", token)
 
     return { success: true }
   } catch (e: any) {

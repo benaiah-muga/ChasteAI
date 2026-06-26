@@ -1,5 +1,4 @@
 export {
-  createDatabaseClient,
   getDatabaseClient,
   createClientForDialect,
   detectDialect,

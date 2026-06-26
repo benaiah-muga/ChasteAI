@@ -101,7 +101,7 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
   const [error, setError] = useState<string | null>(null)
   const [errorDetails, setErrorDetails] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [dbTest, setDbTest] = useState<TestState>({ status: initialDbUrl ? "passed" : "idle" })
+  const [dbTest, setDbTest] = useState<TestState>({ status: "idle" })
   const [providerTest, setProviderTest] = useState<TestState>({ status: "idle" })
 
   function update(fields: Partial<WizardData>) {

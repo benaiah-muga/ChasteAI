@@ -20,7 +20,7 @@ Self-host first: everything must work locally with zero external dependencies.
 |---|---|---|
 | `@chaste-ai/web` | `apps/web/` | Next.js app (auth, dashboard, setup wizard, API routes) |
 | `@chaste-ai/db` | `packages/db/` | Drizzle schema (PG + SQLite), migrations, dialect-switching client, seed script |
-| `@chaste-ai/ai` | `packages/ai/` | AI provider abstraction + OpenAI provider |
+| `@chaste-ai/ai` | `packages/ai/` | AI provider abstraction + OpenAI-compatible providers |
 | `@chaste-ai/typescript-config` | `packages/typescript-config/` | Shared TS config |
 | `@chaste-ai/eslint-config` | `packages/eslint-config/` | Shared ESLint config |
 | `@chaste-ai/prettier-config` | `packages/prettier-config/` | Shared Prettier config |

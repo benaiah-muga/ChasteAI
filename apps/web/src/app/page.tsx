@@ -107,7 +107,7 @@ pnpm dev`}
               <p className="text-sm text-neutral-500">
                 Then open{" "}
                 <Link href="/setup" className="text-indigo-600 hover:underline">
-                  http://localhost:3000/setup
+                  /setup
                 </Link>{" "}
                 in your browser.
               </p>
