@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/trpc/react"
 
+type ProviderType = "openai" | "openai-compatible"
+
+const PROVIDER_LABELS: Record<ProviderType, string> = {
+  openai: "OpenAI",
+  "openai-compatible": "OpenAI Compatible (Groq, Together, etc.)",
+}
+
 export function NewAgentForm({ workspaces }: { workspaces: { id: string; name: string }[] }) {
   const router = useRouter()
   const utils = api.useUtils()
@@ -13,7 +20,10 @@ export function NewAgentForm({ workspaces }: { workspaces: { id: string; name: s
   const [systemPrompt, setSystemPrompt] = useState("")
   const [workspaceId, setWorkspaceId] = useState(workspaces[0]?.id ?? "")
   const [status, setStatus] = useState<"active" | "inactive" | "draft">("draft")
+  const [provider, setProvider] = useState<ProviderType>("openai")
   const [model, setModel] = useState("gpt-4o")
+  const [apiKey, setApiKey] = useState("")
+  const [baseUrl, setBaseUrl] = useState("")
 
   const createAgent = api.agent.create.useMutation({
     onSuccess: (agent) => {
@@ -26,16 +36,22 @@ export function NewAgentForm({ workspaces }: { workspaces: { id: string; name: s
     e.preventDefault()
     if (!name || !workspaceId) return
 
+    const providerConfig: Record<string, unknown> = {
+      provider,
+      model,
+    }
+    if (provider === "openai-compatible") {
+      if (apiKey) providerConfig.apiKey = apiKey
+      if (baseUrl) providerConfig.baseUrl = baseUrl
+    }
+
     createAgent.mutate({
       name,
       description: description || undefined,
       systemPrompt: systemPrompt || undefined,
       status,
       workspaceId,
-      providerConfig: {
-        provider: "openai",
-        model,
-      },
+      providerConfig,
     })
   }
 
@@ -127,22 +143,79 @@ export function NewAgentForm({ workspaces }: { workspaces: { id: string; name: s
         </div>
 
         <div>
-          <label htmlFor="model" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
-            Model
+          <label htmlFor="provider" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+            Provider
           </label>
-          <input
-            id="model"
-            type="text"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none transition-colors placeholder:text-[#94a3b8] focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
-            placeholder="gpt-4o"
-          />
-          <p className="mt-1 text-xs text-[#94a3b8]">
-            Provider: OpenAI. Set <code className="font-mono text-[#64748b]">OPENAI_API_KEY</code>{" "}
-            in your environment.
-          </p>
+          <select
+            id="provider"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as ProviderType)}
+            className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none transition-colors focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+          >
+            {Object.entries(PROVIDER_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
+      </div>
+
+      {provider === "openai-compatible" && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="api-key" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+              API Key
+            </label>
+            <input
+              id="api-key"
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none transition-colors placeholder:text-[#94a3b8] focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+              placeholder="Leave blank to use env default"
+            />
+            <p className="mt-1 text-xs text-[#94a3b8]">
+              Falls back to <code className="font-mono text-[#64748b]">OPENAI_API_KEY</code> or{" "}
+              <code className="font-mono text-[#64748b]">GROQ_API_KEY</code> env vars.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="base-url" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+              Base URL
+            </label>
+            <input
+              id="base-url"
+              type="text"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none transition-colors placeholder:text-[#94a3b8] focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+              placeholder="https://api.groq.com/openai/v1"
+            />
+            <p className="mt-1 text-xs text-[#94a3b8]">
+              API endpoint URL for OpenAI-compatible providers.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <label htmlFor="model" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+          Model
+        </label>
+        <input
+          id="model"
+          type="text"
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none transition-colors placeholder:text-[#94a3b8] focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+          placeholder={provider === "openai" ? "gpt-4o" : "llama-3.3-70b-versatile"}
+        />
+        <p className="mt-1 text-xs text-[#94a3b8]">
+          {provider === "openai"
+            ? "OpenAI model name (e.g., gpt-4o, gpt-4o-mini)"
+            : "Model name for this provider (e.g., llama-3.3-70b-versatile for Groq)"}
+        </p>
       </div>
 
       <div className="flex items-center gap-3 pt-2">

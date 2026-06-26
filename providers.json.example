@@ -1,0 +1,35 @@
+[
+  {
+    "name": "OpenAI GPT-4o",
+    "type": "openai-compatible",
+    "apiKey": "${OPENAI_API_KEY}",
+    "baseUrl": "https://api.openai.com/v1",
+    "defaultModel": "gpt-4o"
+  },
+  {
+    "name": "Groq Llama 3 (Free)",
+    "type": "openai-compatible",
+    "apiKey": "${GROQ_API_KEY}",
+    "baseUrl": "https://api.groq.com/openai/v1",
+    "defaultModel": "llama-3.3-70b-versatile"
+  },
+  {
+    "name": "Local Ollama",
+    "type": "openai-compatible",
+    "baseUrl": "http://localhost:11434/v1",
+    "defaultModel": "llama3"
+  },
+  {
+    "name": "Together AI",
+    "type": "openai-compatible",
+    "apiKey": "${TOGETHER_API_KEY}",
+    "baseUrl": "https://api.together.xyz/v1",
+    "defaultModel": "mistralai/Mixtral-8x22B-Instruct-v0.1"
+  },
+  {
+    "name": "LiteLLM Proxy",
+    "type": "openai-compatible",
+    "baseUrl": "http://localhost:4000/v1",
+    "defaultModel": "gpt-4o"
+  }
+]

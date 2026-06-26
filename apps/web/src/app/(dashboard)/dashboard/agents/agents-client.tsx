@@ -72,7 +72,11 @@ export function AgentsClient({ agents: initial }: { agents: Agent[]; workspaces:
   function getProviderLabel(config: Record<string, unknown>) {
     const provider = (config.provider as string) ?? "openai"
     const model = (config.model as string) ?? "gpt-4o"
-    return `${provider === "openai" ? "OpenAI" : provider} · ${model}`
+    const label =
+      provider === "openai" ? "OpenAI" :
+      provider === "openai-compatible" ? "OpenAI Compatible" :
+      provider
+    return `${label} · ${model}`
   }
 
   function timeAgo(date: Date) {

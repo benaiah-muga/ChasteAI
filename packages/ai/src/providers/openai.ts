@@ -12,23 +12,29 @@ import type {
 } from "../types"
 import { providerRegistry } from "../registry"
 
-type OpenAIConfig = {
+type OpenAICompatibleConfig = {
   apiKey?: string
   baseUrl?: string
   model?: string
+  type?: string
+  name?: string
 }
 
-class OpenAIProvider implements AIProvider {
-  readonly id = "openai"
-  readonly name = "OpenAI"
-  readonly type = "openai"
+class OpenAICompatibleProvider implements AIProvider {
+  readonly id: string
+  readonly name: string
+  readonly type: string
 
   private client: OpenAI
   private defaultModel: string
 
-  constructor(config: OpenAIConfig) {
+  constructor(config: OpenAICompatibleConfig) {
+    this.id = config.type ?? "openai-compatible"
+    this.name = config.name ?? "OpenAI-Compatible"
+    this.type = config.type ?? "openai-compatible"
+
     this.client = new OpenAI({
-      apiKey: config.apiKey ?? process.env.OPENAI_API_KEY,
+      apiKey: config.apiKey ?? process.env.OPENAI_API_KEY ?? process.env.GROQ_API_KEY,
       baseURL: config.baseUrl,
     })
     this.defaultModel = config.model ?? "gpt-4o"
@@ -63,7 +69,7 @@ class OpenAIProvider implements AIProvider {
     })
 
     const choice = response.choices[0]
-    if (!choice) throw new Error("No response from OpenAI")
+    if (!choice) throw new Error("No response from AI provider")
 
     return {
       id: response.id,
@@ -130,7 +136,7 @@ class OpenAIProvider implements AIProvider {
   async checkHealth(): Promise<HealthStatus> {
     const start = performance.now()
     try {
-      await this.client.models.retrieve("gpt-4o-mini")
+      await this.client.models.list()
       return {
         healthy: true,
         latency: Math.round(performance.now() - start),
@@ -160,4 +166,5 @@ class OpenAIProvider implements AIProvider {
   }
 }
 
-providerRegistry.register("openai", (config) => new OpenAIProvider(config as OpenAIConfig))
+providerRegistry.register("openai", (config) => new OpenAICompatibleProvider(config as OpenAICompatibleConfig))
+providerRegistry.register("openai-compatible", (config) => new OpenAICompatibleProvider(config as OpenAICompatibleConfig))
