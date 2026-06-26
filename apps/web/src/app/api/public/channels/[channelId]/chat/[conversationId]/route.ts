@@ -50,7 +50,8 @@ export async function POST(
 
   const provider = createProvider({
     type: (agent.providerConfig?.provider as string) ?? "openai",
-    apiKey: (agent.providerConfig?.apiKey as string) ?? process.env.OPENAI_API_KEY,
+    apiKey: (agent.providerConfig?.apiKey as string) ?? process.env.OPENAI_API_KEY ?? process.env.GROQ_API_KEY,
+    baseUrl: agent.providerConfig?.baseUrl as string | undefined,
     model: (agent.providerConfig?.model as string) ?? "gpt-4o",
   })
 

@@ -18,21 +18,23 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@libsql/client": "^0.14.0",
     "drizzle-orm": "^0.39.0",
-    "pg": "^8.13.0",
     "drizzle-zod": "^0.6.0",
+    "pg": "^8.13.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.30.0",
-    "@types/pg": "^8.11.0",
-    "@chaste-ai/typescript-config": "workspace:*",
     "@chaste-ai/eslint-config": "workspace:*",
-    "typescript": "^5.7.0",
-    "eslint": "^9.0.0",
-    "bcryptjs": "^2.4.3",
+    "@chaste-ai/typescript-config": "workspace:*",
+    "@clack/prompts": "^1.6.0",
     "@types/bcryptjs": "^2.4.6",
+    "@types/pg": "^8.11.0",
+    "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.0",
-    "tsx": "^4.19.0"
+    "drizzle-kit": "^0.30.0",
+    "eslint": "^9.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
   }
 }

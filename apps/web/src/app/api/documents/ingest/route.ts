@@ -58,9 +58,9 @@ export async function POST(req: NextRequest, _props: { params: Promise<Record<st
     const chunks = chunkText(body.content, { maxChunkSize: 1000, overlap: 200 })
 
     const provider = createProvider({
-      type: "openai",
+      type: "openai-compatible",
       model: "gpt-4o",
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.OPENAI_API_KEY ?? process.env.GROQ_API_KEY,
     })
 
     const chunkRecords: (typeof documentChunks.$inferInsert)[] = []

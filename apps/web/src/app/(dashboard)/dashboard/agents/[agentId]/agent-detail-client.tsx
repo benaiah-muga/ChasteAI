@@ -269,9 +269,14 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
                 Provider
               </dt>
               <dd className="mt-1 text-[#0f172a]">
-                {(initial.providerConfig?.provider as string) === "openai"
-                  ? "OpenAI"
-                  : (initial.providerConfig?.provider as string)}
+                {(() => {
+                  const p = initial.providerConfig?.provider as string
+                  if (p === "openai") return "OpenAI"
+                  if (p === "openai-compatible" && initial.providerConfig?.baseUrl)
+                    return `OpenAI Compatible (${new URL(initial.providerConfig.baseUrl as string).hostname})`
+                  if (p === "openai-compatible") return "OpenAI Compatible"
+                  return p
+                })()}
               </dd>
             </div>
             <div>
