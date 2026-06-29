@@ -10,4 +10,5 @@ export const memberships = sqliteTable("memberships", {
   userId: text("user_id").notNull(),
   role: text("role").notNull().$type<MembershipRole>().default("member"),
   createdAt: timestampNow("created_at"),
+  updatedAt: timestampNow("updated_at"),
 })

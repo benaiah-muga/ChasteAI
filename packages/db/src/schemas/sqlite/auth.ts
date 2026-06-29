@@ -9,6 +9,8 @@ export const user = sqliteTable("user", {
   emailVerified: timestamp("emailVerified"),
   image: text("image"),
   password: text("password"),
+  theme: text("theme").default("system"),
+  density: text("density").default("comfortable"),
 })
 
 export const session = sqliteTable("session", {

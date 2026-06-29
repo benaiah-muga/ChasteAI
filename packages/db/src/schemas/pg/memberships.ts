@@ -9,4 +9,5 @@ export const memberships = pgTable("memberships", {
   userId: uuid("user_id").notNull(),
   role: text("role").notNull().$type<MembershipRole>().default("member"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

@@ -8,6 +8,8 @@ export const user = pgTable("user", {
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   password: text("password"),
+  theme: text("theme").default("system"),
+  density: text("density").default("comfortable"),
 })
 
 export const session = pgTable("session", {

@@ -152,3 +152,44 @@ CREATE TABLE IF NOT EXISTS analytics_events (
   payload text DEFAULT '{}',
   timestamp text NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS invitations (
+  id text PRIMARY KEY NOT NULL,
+  workspace_id text NOT NULL,
+  email text NOT NULL,
+  invited_by_user_id text NOT NULL,
+  role text NOT NULL DEFAULT 'member',
+  status text NOT NULL DEFAULT 'pending',
+  token text NOT NULL UNIQUE,
+  expires_at text NOT NULL,
+  accepted_at text,
+  created_at text NOT NULL,
+  updated_at text NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_invitations_workspace_email ON invitations(workspace_id, email);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id text PRIMARY KEY NOT NULL,
+  user_id text NOT NULL,
+  token text NOT NULL UNIQUE,
+  device_name text,
+  device_type text,
+  browser text,
+  os text,
+  ip_address text,
+  location text,
+  is_revoked text NOT NULL DEFAULT 'false',
+  last_active_at text NOT NULL,
+  created_at text NOT NULL,
+  expires_at text NOT NULL
+);
+
+ALTER TABLE workspaces ADD COLUMN description text;
+ALTER TABLE workspaces ADD COLUMN timezone text DEFAULT 'UTC';
+ALTER TABLE workspaces ADD COLUMN deleted_at text;
+
+ALTER TABLE memberships ADD COLUMN updated_at text;
+
+ALTER TABLE user ADD COLUMN theme text DEFAULT 'system';
+ALTER TABLE user ADD COLUMN density text DEFAULT 'comfortable';

@@ -60,7 +60,8 @@
    - 6.10 [API Keys](#610-api-keys)
    - 6.11 [Documents](#611-documents)
    - 6.12 [Embedded Widget](#612-embedded-widget)
-   - 6.13 [Settings](#613-settings)
+   - 6.13 [Team Management](#613-team-management)
+   - 6.14 [Settings](#614-settings)
 7. [Theme Implementation Strategy](#7-theme-implementation-strategy)
 8. [Migration Plan](#8-migration-plan)
 
@@ -518,7 +519,7 @@ Use **Lucide** (`lucide-react`) — open-source, consistent stroke weight, tree-
 | Shortcut | Action |
 |---|---|
 | `⌘K` / `Ctrl+K` | Open command palette / global search |
-| `⌘1`–`⌘7` | Navigate to sidebar items |
+| `⌘1`–`⌘8` | Navigate to sidebar items |
 | `Esc` | Close modal / drawer / command palette |
 | `Enter` | Confirm action / submit form |
 | `⌘Enter` | Submit form (in textarea contexts) |
@@ -1184,14 +1185,15 @@ gap: 6px;
   - **Workspace switcher:** Dropdown at top of navigation (36px)
   - **Navigation items:** 32px each, vertical stack with 2px gap
   - **Section labels:** 11px uppercase, 8px above section, `--color-text-muted`
+  - **Separator:** 1px `--color-border`, 8px vertical margin
+  - **Settings item:** Always visible at bottom of nav stack (gear icon, "Settings")
   - **Bottom section:** User area (see below)
 
 #### User Section (Sidebar Bottom)
 
-- Avatar (24px) + name (14px, truncated at 120px max-width) + email (12px, `--color-text-muted`, truncated)
+- Avatar (24px) + name (14px, truncated) + email (12px, `--color-text-muted`, truncated)
 - Hover: `--color-surface-hover` background, full row clickable
 - Click: opens user menu popover upward containing:
-  - Settings → `/dashboard/settings`
   - Theme toggle (Dark / Light / System)
   - Sign Out (danger text)
 - Online status dot on avatar (see §4.15 Avatars)
@@ -1207,6 +1209,9 @@ gap: 6px;
 │  ⟐  Channels                   ⌘5   │
 │  ⟐  API Keys                   ⌘6   │
 │  ⟐  Documents                  ⌘7   │
+│  ⟐  Team                       ⌘8   │
+├──────────────────────────────────────┤
+│  ⚙  Settings                        │
 └──────────────────────────────────────┘
 ```
 
@@ -1586,6 +1591,8 @@ This is a **welcome surface / launch screen**, not a marketing hero. The differe
 
 | Icon | Label | Route | Keyboard Shortcut |
 |---|---|---|---|
+| Icon | Label | Route | Keyboard Shortcut |
+|---|---|---|---|---|
 | Grid | Overview | `/dashboard` | `⌘1` |
 | Chart | Analytics | `/dashboard/analytics` | `⌘2` |
 | Bot | Agents | `/dashboard/agents` | `⌘3` |
@@ -1593,6 +1600,9 @@ This is a **welcome surface / launch screen**, not a marketing hero. The differe
 | Nodes | Channels | `/dashboard/channels` | `⌘5` |
 | Key | API Keys | `/dashboard/api-keys` | `⌘6` |
 | File | Documents | `/dashboard/documents` | `⌘7` |
+| Users | Team | `/dashboard/team` | `⌘8` |
+| — | — | — | — |
+| Gear | Settings | `/dashboard/settings` | — |
 
 #### Global Search (⌘K)
 
@@ -2192,19 +2202,385 @@ box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
 - **Screen readers:** `aria-live="polite"` region for new messages, aria-expanded state on launcher
 - **Reduced motion:** `prefers-reduced-motion` disables expand/collapse animations (instant show/hide)
 
-### 6.13 Settings
+### 6.13 Team Management
+
+#### Overview
+
+Team management is a top-level operational screen, not buried in settings. It lives at `/dashboard/team` and is accessible from both the sidebar navigation (⌘8) and via invite notifications.
+
+The screen gives workspace owners and admins full visibility into who has access and the tools to manage the team.
 
 #### Layout
 
-- Single-page layout with vertical section navigation (no tabs)
-- Clean, form-heavy design with distinct sections separated by generous spacing (`space-16`)
+```
+── Header ──────────────────────────────────────
+Team                            [Invite Member]
 
-#### Sections
+── Member Table ─────────────────────────────────
+┌──────┬──────────┬──────────────┬──────┬──────────┬──────────┐
+│ User │ Email    │ Role         │ Status│ Joined   │ Actions  │
+├──────┼──────────┼──────────────┼──────┼──────────┼──────────┤
+│ ⟐    │ ben@     │ Owner   ●    │ Active│ Jan 2025 │ —        │
+│ Ben  │ corp.io  │ [indigo]     │       │          │          │
+├──────┼──────────┼──────────────┼──────┼──────────┼──────────┤
+│ ⟐    │ sarah@   │ Admin   ●    │ Active│ Feb 2025 │ [▼role]  │
+│ Sarah│ corp.io  │ [blue]      │       │          │ [✕]      │
+├──────┼──────────┼──────────────┼──────┼──────────┼──────────┤
+│ ⟐    │ alex@    │ Member  ●    │ Active│ Mar 2025 │ [▼role]  │
+│ Alex │ corp.io  │ [neutral]   │       │          │ [✕]      │
+├──────┼──────────┼──────────────┼──────┼──────────┼──────────┤
+│ ⟐    │ jordan@  │ Member  ○    │ Pending│ —        │ [Resend] │
+│      │ corp.io  │ [neutral]   │ Invite│          │ [Revoke] │
+└──────┴──────────┴──────────────┴──────┴──────────┴──────────┘
+```
 
-- **General:** Workspace name, description, timezone
-- **Appearance:** Theme toggle (Dark / Light / System), density (compact / comfortable)
-- **Members:** Team management (invite via email, role selector: Admin / Member, remove action)
-- **Danger Zone:** Delete workspace (requires typing workspace name to confirm), export all data
+#### Member Table
+
+| Column | Spec | Details |
+|---|---|---|
+| User | Avatar (24px) + name (14px semibold) + layout | Name and avatar, 200px |
+| Email | 13px, `--color-text-tertiary` | Full email, monospace for domains |
+| Role | Badge with dropdown | Pill badge (see below) + inline dropdown to change |
+| Status | Dot + label | Active (green), Pending (yellow, "Invited"), Inactive (gray) |
+| Joined | 13px, `--color-text-tertiary` | "Jan 15, 2025" or "—" for pending |
+| Actions | Icon buttons | Visible on row hover |
+
+#### Role Badges
+
+| Role | Badge BG (Dark) | Badge Text | Dot Color |
+|---|---|---|---|
+| Owner | `--color-accent-subtle` | `--color-accent-text` | Indigo |
+| Admin | `--color-info-subtle` | `--color-info-text` | Blue |
+| Member | `--color-surface-high` | `--color-text-secondary` | Gray |
+
+#### Invite Flow
+
+**Trigger:** "Invite Member" button in header → opens modal.
+
+```
+┌──────────────────────────────────────┐
+│  Invite team member                  │
+│                                      │
+│  Email address                       │
+│  ┌──────────────────────────────┐   │
+│  │ colleague@company.com        │   │
+│  └──────────────────────────────┘   │
+│                                      │
+│  Role                                │
+│  [Admin ▼]                           │
+│                                      │
+│  Admin can manage agents, channels,  │
+│  and team members.                   │
+│                                      │
+│  ┌──────────────────────────────┐   │
+│  │  Send Invite                 │   │
+│  └──────────────────────────────┘   │
+│                                      │
+│  ──────────────────────────────      │
+│  Or share this invite link:          │
+│  ┌──────────────────────────────┐   │
+│  │ chasteai.io/join/abc123      │   │
+│  │                          [📋]│   │
+│  └──────────────────────────────┘   │
+└──────────────────────────────────────┘
+```
+
+**States:**
+- **Sending:** Button shows spinner, "Sending..."
+- **Sent:** Green checkmark, "Invitation sent" message, modal closes
+- **Error:** Red inline error, "Failed to send. Try again."
+- **Duplicate:** "This email is already a member of this workspace"
+
+**Post-invite behavior:**
+- Row appears in table with "Pending" status (yellow dot, "Invited")
+- Actions column shows: [Resend] [Revoke]
+- Invite link copyable below the email input
+
+#### Role Change
+
+- **Inline dropdown** on role badge (for eligible roles)
+- Owner can change: Admin → Member, Member → Admin
+- Admin can change: Member → Admin, Admin → Member
+- Member has no dropdown (cannot self-promote)
+- Last owner cannot be demoted or removed
+- Confirmation for role demotion: "Are you sure? This will revoke their ability to manage [permissions]."
+
+#### Remove Member
+
+- **Trigger:** ✕ button on row → confirmation dialog
+- **Dialog copy:** "Remove [name] from [workspace]? They will lose access to all workspace resources."
+- **Confirm button:** Danger variant, "Remove"
+- **Protection:** Cannot remove self if last owner; disabled tooltip explains
+
+#### Schema Requirements
+
+The invite flow requires a new `invitations` table in both PG and SQLite schemas + a `user_sessions` table for session management. The following schema changes were implemented:
+
+**New `invitations` table** — tracks pending, accepted, expired, and revoked invites:
+- `id`, `workspace_id` (FK→workspaces), `email`, `invited_by_user_id`, `role` (default: `member`), `status` (`pending` | `accepted` | `expired` | `revoked`), `token` (unique), `expires_at`, `accepted_at`, `created_at`, `updated_at`
+
+**New `user_sessions` table** — enables session listing and revocation in Settings:
+- `id`, `user_id`, `token` (unique), `device_name`, `device_type`, `browser`, `os`, `ip_address`, `location`, `is_revoked`, `last_active_at`, `created_at`, `expires_at`
+
+**Columns added to `workspaces`:**
+- `description` (text), `timezone` (text, default `UTC`), `deleted_at` (soft-delete support)
+
+**Columns added to `user`:**
+- `theme` (text, default `system`), `density` (text, default `comfortable`)
+
+**Column added to `memberships`:**
+- `updated_at` (was missing — now consistent with every other table)
+
+#### Empty State
+
+When the user is the only member (post-setup):
+
+```
+┌──────────────────────────────────────────┐
+│                                          │
+│               👥                          │
+│                                          │
+│     Invite your team to collaborate      │
+│                                          │
+│  Share this workspace with your team     │
+│  members so they can help manage         │
+│  agents, conversations, and settings.    │
+│                                          │
+│  ┌──────────────────────────────────┐   │
+│  │  Invite Member                   │   │
+│  └──────────────────────────────────┘   │
+│                                          │
+└──────────────────────────────────────────┘
+```
+
+### 6.14 Settings
+
+#### Overview
+
+Settings lives at `/dashboard/settings` and is always visible in the sidebar (gear icon, bottom section). It provides personal account management and workspace configuration in a tabbed single-page layout.
+
+#### Layout
+
+```
+── Tab Bar ─────────────────────────────────────
+Account | Workspace | Appearance
+
+── Content Area ─────────────────────────────────
+[Active tab content fills remaining width]
+```
+
+- Tab bar: underline tabs (see §4.4), sticky below page title
+- Content: single scrollable area, no nested scrolling
+- Save behavior: individual save buttons per section (no global "Save All")
+
+#### Account Tab
+
+##### Profile Section
+
+```
+┌──────────────────────────────────────────────┐
+│  Profile                                     │
+│                                              │
+│  ┌────────┐                                  │
+│  │        │  [Change Avatar]                 │
+│  │ Avatar │  [Remove]                        │
+│  │  (64px)│                                  │
+│  └────────┘                                  │
+│                                              │
+│  Name                                        │
+│  ┌──────────────────────────────────────┐   │
+│  │ Ben                                  │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  Email                                      │
+│  ┌──────────────────────────────────────┐   │
+│  │ ben@corp.io                          │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │  Save Changes                        │   │
+│  └──────────────────────────────────────┘   │
+└──────────────────────────────────────────────┘
+```
+
+- **Avatar:** 64px round, click to upload (crop to 1:1), drag-and-drop or file picker
+- **Upload states:** idle → cropping (modal with drag-resize circle crop) → saving (progress) → saved
+- **Name:** text input, 14px, validate non-empty on save
+- **Email:** text input, validate email format, uniqueness check on blur
+- **Save:** saves all profile fields, show success toast
+
+##### Password Section
+
+```
+┌──────────────────────────────────────────────┐
+│  Password                                    │
+│                                              │
+│  Current password                            │
+│  ┌──────────────────────────────────────┐   │
+│  │ •••••••••                             │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  New password                                │
+│  ┌──────────────────────────────────────┐   │
+│  │ •••••••••                             │   │
+│  └──────────────────────────────────────┘   │
+│  ○○●○○○  Strength: Fair                    │
+│                                              │
+│  Confirm new password                        │
+│  ┌──────────────────────────────────────┐   │
+│  │ •••••••••                             │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │  Update Password                    │   │
+│  └──────────────────────────────────────┘   │
+└──────────────────────────────────────────────┘
+```
+
+- **Strength indicator:** 5 segments, filled left-to-right by complexity
+  - 0/5: empty (gray)
+  - 1/5: Weak (red)
+  - 2/5: Fair (orange)  
+  - 3/5: Good (yellow)
+  - 4/5: Strong (light green)
+  - 5/5: Very strong (green)
+- **Validation:** current password must match, new ≥ 8 chars, new ≠ current, confirm must match
+- **Error:** inline on field + banner at top if server error
+- **Success:** toast "Password updated", clear form
+
+##### Active Sessions
+
+```
+┌──────────────────────────────────────────────┐
+│  Active Sessions                              │
+│                                              │
+│  ┌──────────┬──────────┬──────────┬────────┐ │
+│  │ Device   │ Location │ Last Seen│ Action │ │
+│  ├──────────┼──────────┼──────────┼────────┤ │
+│  │ Chrome   │ Nairobi  │ Now      │ Current│ │
+│  │ on macOS │          │          │        │ │
+│  ├──────────┼──────────┼──────────┼────────┤ │
+│  │ Firefox  │ Nairobi  │ 2h ago   │ [Revoke│ │
+│  │ on Linux │          │          │  ]     │ │
+│  └──────────┴──────────┴──────────┴────────┘ │
+│                                              │
+│  Sessions: 2 active                          │
+└──────────────────────────────────────────────┘
+```
+
+- Current session labeled with "Current" badge
+- Revoke action: confirmation dialog "Sign out this device?"
+- After revoke: toast "Session revoked"
+
+#### Workspace Tab
+
+```
+┌──────────────────────────────────────────────┐
+│  General                                     │
+│                                              │
+│  Workspace name                              │
+│  ┌──────────────────────────────────────┐   │
+│  │ Acme Corp                            │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  Workspace slug                              │
+│  ┌──────────────────────────────────────┐   │
+│  │ acme-corp        [Check availability] │   │
+│  └──────────────────────────────────────┘   │
+│  chasteai.io/acme-corp                      │
+│                                              │
+│  Description (optional)                      │
+│  ┌──────────────────────────────────────┐   │
+│  │ Customer support for Acme Corp       │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  Timezone                                    │
+│  [Africa/Nairobi (UTC+3)           ▼]        │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │  Save Changes                        │   │
+│  └──────────────────────────────────────┘   │
+└──────────────────────────────────────────────┘
+```
+
+- **Slug:** auto-generated from name, editable separately
+- **Slug check:** "Check availability" button → green checkmark (available) or red X (taken) with suggestions
+- **Timezone:** searchable select with common timezones listed first
+
+##### Danger Zone
+
+```
+┌──────────────────────────────────────────────┐
+│  ⚠  Danger Zone                              │
+│                                              │
+│  Deleting your workspace is permanent and     │
+│  cannot be undone. All agents, conversations, │
+│  channels, documents, and API keys will be    │
+│  deleted.                                     │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │  Delete this workspace              │   │
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  (Button opens confirmation modal)           │
+└──────────────────────────────────────────────┘
+```
+
+**Confirmation modal:**
+
+```
+┌──────────────────────────────────────┐
+│  ⚠  Delete workspace                 │
+│                                      │
+│  This action cannot be undone. This  │
+│  will permanently delete:            │
+│  • 8 agents                          │
+│  • 142 conversations                 │
+│  • 4 channels                        │
+│  • 12 documents                      │
+│  • 3 API keys                        │
+│                                      │
+│  Type "Acme Corp" to confirm:        │
+│  ┌──────────────────────────────┐   │
+│  │                              │   │
+│  └──────────────────────────────┘   │
+│                                      │
+│  ┌──────────────────────────────┐   │
+│  │  I understand, delete        │   │
+│  │  this workspace              │   │
+│  └──────────────────────────────┘   │
+│  [Cancel]                           │
+└──────────────────────────────────────┘
+```
+
+- Delete button: danger variant, disabled until exact workspace name is typed
+- Lists resource counts to make consequences concrete
+
+#### Appearance Tab
+
+```
+┌──────────────────────────────────────────────┐
+│  Theme                                       │
+│                                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │ ○ Dark   │  │ ○ Light  │  │ ○ System │   │
+│  │  [preview]│  │ [preview]│  │          │   │
+│  └──────────┘  └──────────┘  └──────────┘   │
+│                                              │
+│  Density                                     │
+│                                              │
+│  [○ Comfortable  |  ● Compact]              │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │  Save Preferences                    │   │
+│  └──────────────────────────────────────┘   │
+└──────────────────────────────────────────────┘
+```
+
+- **Theme:** Card-style radio selector, each option shows a small dark/light preview thumbnail
+- **Density:** Toggle between Comfortable (current default, spacious padding) and Compact (tighter padding, smaller text, more information density)
+- **System theme:** Follows `prefers-color-scheme`, shows current detected mode
+- **Save:** persists to localStorage + user preferences API
 
 ---
 
