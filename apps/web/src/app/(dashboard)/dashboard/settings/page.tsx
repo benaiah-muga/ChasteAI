@@ -139,9 +139,7 @@ export default function SettingsPage() {
             <span className="text-success-text text-sm">Settings saved</span>
           )}
           {updateSettings.isError && (
-            <span className="text-danger-text text-sm">
-              {updateSettings.error.message}
-            </span>
+            <span className="text-danger-text text-sm">{updateSettings.error.message}</span>
           )}
         </div>
       </div>

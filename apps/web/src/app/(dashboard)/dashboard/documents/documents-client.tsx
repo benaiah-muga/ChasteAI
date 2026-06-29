@@ -253,7 +253,10 @@ function UploadForm({ onDone }: { onDone: () => void }) {
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="doc-workspace" className="text-text-primary mb-1.5 block text-sm font-medium">
+          <label
+            htmlFor="doc-workspace"
+            className="text-text-primary mb-1.5 block text-sm font-medium"
+          >
             Workspace
           </label>
           <select
@@ -288,7 +291,10 @@ function UploadForm({ onDone }: { onDone: () => void }) {
         </div>
 
         <div>
-          <label htmlFor="doc-content" className="text-text-primary mb-1.5 block text-sm font-medium">
+          <label
+            htmlFor="doc-content"
+            className="text-text-primary mb-1.5 block text-sm font-medium"
+          >
             Content
           </label>
           <textarea
@@ -304,7 +310,9 @@ function UploadForm({ onDone }: { onDone: () => void }) {
       </div>
 
       {error && <p className="text-danger-text mt-3 text-sm">{error}</p>}
-      {createDoc.error && <p className="text-danger-text mt-3 text-sm">{createDoc.error.message}</p>}
+      {createDoc.error && (
+        <p className="text-danger-text mt-3 text-sm">{createDoc.error.message}</p>
+      )}
 
       <div className="mt-6 flex items-center gap-3">
         <button
@@ -377,7 +385,10 @@ function WebsiteCrawlForm({ onDone }: { onDone: () => void }) {
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="crawl-workspace" className="text-text-primary mb-1.5 block text-sm font-medium">
+          <label
+            htmlFor="crawl-workspace"
+            className="text-text-primary mb-1.5 block text-sm font-medium"
+          >
             Workspace
           </label>
           <select
@@ -407,7 +418,7 @@ function WebsiteCrawlForm({ onDone }: { onDone: () => void }) {
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border pl-10 pr-3 py-2 text-sm outline-none focus:ring-1"
+              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border py-2 pl-10 pr-3 text-sm outline-none focus:ring-1"
               placeholder="https://docs.example.com"
               required
             />
@@ -416,7 +427,10 @@ function WebsiteCrawlForm({ onDone }: { onDone: () => void }) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="max-pages" className="text-text-primary mb-1.5 block text-sm font-medium">
+            <label
+              htmlFor="max-pages"
+              className="text-text-primary mb-1.5 block text-sm font-medium"
+            >
               Max pages
             </label>
             <input
@@ -430,7 +444,10 @@ function WebsiteCrawlForm({ onDone }: { onDone: () => void }) {
             />
           </div>
           <div>
-            <label htmlFor="max-depth" className="text-text-primary mb-1.5 block text-sm font-medium">
+            <label
+              htmlFor="max-depth"
+              className="text-text-primary mb-1.5 block text-sm font-medium"
+            >
               Max depth
             </label>
             <input
@@ -457,8 +474,19 @@ function WebsiteCrawlForm({ onDone }: { onDone: () => void }) {
           {isCrawling ? (
             <>
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
               Crawling...
             </>

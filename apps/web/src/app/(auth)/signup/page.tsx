@@ -10,7 +10,7 @@ export default function SignUpPage() {
       </div>
 
       <h1 className="text-text-primary text-xl font-semibold">Create an account</h1>
-      <p className="text-text-tertiary mt-2 mb-8 text-sm">Get started with ChasteAI</p>
+      <p className="text-text-tertiary mb-8 mt-2 text-sm">Get started with ChasteAI</p>
 
       <SignUpForm />
 

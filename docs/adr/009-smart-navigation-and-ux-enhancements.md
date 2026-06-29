@@ -43,6 +43,7 @@ Added `overflow-y-auto` with `min-h-0` to the nav container so it scrolls indepe
 ### 6. Mobile Sidebar (`(dashboard)/layout.tsx`)
 
 Added collapsible overlay drawer:
+
 - Hamburger (Menu) button in header, visible only on mobile (`lg:hidden`)
 - Sidebar becomes a fixed overlay (`fixed inset-y-0 left-0 z-40`) with backdrop
 - Desktop (`lg:` breakpoint): sidebar is static in-flow (`lg:static lg:z-0 lg:translate-x-0`)
@@ -52,6 +53,7 @@ Added collapsible overlay drawer:
 ### 7. Website Crawler (`packages/rag/src/crawler/`)
 
 Full site crawler using `cheerio` for HTML parsing:
+
 - Accepts root URL, max pages (1-500), max depth (1-5)
 - Same-domain crawling only
 - Respects `User-Agent: ChasteAI-Crawler/1.0`

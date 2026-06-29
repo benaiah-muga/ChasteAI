@@ -15,7 +15,7 @@ export default function SignInPage() {
       </div>
 
       <h1 className="text-text-primary text-xl font-semibold">Welcome back</h1>
-      <p className="text-text-tertiary mt-2 mb-8 text-sm">Sign in to your workspace</p>
+      <p className="text-text-tertiary mb-8 mt-2 text-sm">Sign in to your workspace</p>
 
       <SignInForm oauthProviders={availableProviders} />
 
