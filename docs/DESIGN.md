@@ -1618,9 +1618,7 @@ This is a **welcome surface / launch screen**, not a marketing hero. The differe
 #### Navigation Items
 
 | Icon   | Label         | Route                      | Keyboard Shortcut |
-| ------ | ------------- | -------------------------- | ----------------- | --- |
-| Icon   | Label         | Route                      | Keyboard Shortcut |
-| ---    | ---           | ---                        | ---               | --- |
+| ------ | ------------- | -------------------------- | ----------------- |
 | Grid   | Overview      | `/dashboard`               | `⌘1`              |
 | Chart  | Analytics     | `/dashboard/analytics`     | `⌘2`              |
 | Bot    | Agents        | `/dashboard/agents`        | `⌘3`              |
@@ -2311,14 +2309,14 @@ Team                            [Invite Member]
 
 #### Member Table
 
-| Column  | Spec                                          | Details                                                      |
-| ------- | --------------------------------------------- | ------------------------------------------------------------ |
-| User    | Avatar (24px) + name (14px semibold) + layout | Name and avatar, 200px                                       |
-| Email   | 13px, `--color-text-tertiary`                 | Full email, monospace for domains                            |
-| Role    | Badge with dropdown                           | Pill badge (see below) + inline dropdown to change           |
-| Status  | Dot + label                                   | Active (green), Pending (yellow, "Invited"), Inactive (gray) |
-| Joined  | 13px, `--color-text-tertiary`                 | "Jan 15, 2025" or "—" for pending                            |
-| Actions | Icon buttons                                  | Visible on row hover                                         |
+| Column  | Spec                                          | Details                                                       |
+| ------- | --------------------------------------------- | ------------------------------------------------------------- |
+| User    | Avatar (24px) + name (14px semibold) + layout | Name and avatar, 200px                                        |
+| Email   | 13px, `--color-text-tertiary`                 | Full email, monospace for domains                             |
+| Role    | Badge with dropdown                           | Pill badge (see below) + inline dropdown to change            |
+| Status  | Dot + label                                   | Active (green), Pending (yellow, "Invited"), Suspended (gray) |
+| Joined  | 13px, `--color-text-tertiary`                 | "Jan 15, 2025" or "—" for pending                             |
+| Actions | Icon buttons                                  | Visible on row hover                                          |
 
 #### Role Badges
 

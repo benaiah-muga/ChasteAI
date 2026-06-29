@@ -1,14 +1,21 @@
 "use server"
 
-import { eq, and } from "drizzle-orm"
+import { eq, and, inArray } from "drizzle-orm"
 import { getDatabaseClient, user, memberships } from "@chaste-ai/db"
 import { auth } from "@/auth"
+import { z } from "zod"
 
-export async function approveUserAction(data: {
-  userId: string
-  workspaceId: string
-  role: "admin" | "member"
-}) {
+const approveSchema = z.object({
+  userId: z.string().min(1),
+  workspaceId: z.string().min(1),
+  role: z.enum(["admin", "member"]),
+})
+
+export async function approveUserAction(data: z.infer<typeof approveSchema>) {
+  const parsed = approveSchema.safeParse(data)
+  if (!parsed.success) return { error: "Invalid request" }
+
+  const { userId, workspaceId, role } = parsed.data
   const session = await auth()
   if (!session?.user?.id) return { error: "Not authenticated" }
 
@@ -17,9 +24,7 @@ export async function approveUserAction(data: {
   const [membership] = await db
     .select({ role: memberships.role })
     .from(memberships)
-    .where(
-      and(eq(memberships.userId, session.user.id), eq(memberships.workspaceId, data.workspaceId)),
-    )
+    .where(and(eq(memberships.userId, session.user.id), eq(memberships.workspaceId, workspaceId)))
     .limit(1)
 
   if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
@@ -29,17 +34,14 @@ export async function approveUserAction(data: {
   const [existing] = await db
     .select({ id: memberships.id })
     .from(memberships)
-    .where(and(eq(memberships.userId, data.userId), eq(memberships.workspaceId, data.workspaceId)))
+    .where(and(eq(memberships.userId, userId), eq(memberships.workspaceId, workspaceId)))
     .limit(1)
 
   if (existing) return { error: "User is already a member of this workspace" }
 
-  await db.update(user).set({ status: "active" }).where(eq(user.id, data.userId))
-
-  await db.insert(memberships).values({
-    workspaceId: data.workspaceId,
-    userId: data.userId,
-    role: data.role,
+  await db.transaction(async (tx) => {
+    await tx.update(user).set({ status: "active" }).where(eq(user.id, userId))
+    await tx.insert(memberships).values({ workspaceId, userId, role })
   })
 
   return { success: true }
@@ -51,13 +53,23 @@ export async function denyUserAction(userId: string) {
 
   const db = getDatabaseClient()
 
-  const [membership] = await db
+  const targetWorkspaces = await db
+    .select({ workspaceId: memberships.workspaceId })
+    .from(memberships)
+    .where(eq(memberships.userId, userId))
+
+  const targetIds = targetWorkspaces.map((m) => m.workspaceId)
+  if (targetIds.length === 0) return { error: "User is not a member of any workspace" }
+
+  const [adminMembership] = await db
     .select({ role: memberships.role })
     .from(memberships)
-    .where(eq(memberships.userId, session.user.id))
+    .where(
+      and(eq(memberships.userId, session.user.id), inArray(memberships.workspaceId, targetIds)),
+    )
     .limit(1)
 
-  if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+  if (!adminMembership || (adminMembership.role !== "owner" && adminMembership.role !== "admin")) {
     return { error: "You do not have permission to deny users" }
   }
 
@@ -71,6 +83,16 @@ export async function getPendingUsersAction() {
   if (!session?.user?.id) return { error: "Not authenticated" }
 
   const db = getDatabaseClient()
+
+  const [adminMembership] = await db
+    .select({ role: memberships.role })
+    .from(memberships)
+    .where(eq(memberships.userId, session.user.id))
+    .limit(1)
+
+  if (!adminMembership || (adminMembership.role !== "owner" && adminMembership.role !== "admin")) {
+    return { error: "Not authorized" }
+  }
 
   const pending = await db
     .select({

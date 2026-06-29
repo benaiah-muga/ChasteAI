@@ -4,7 +4,11 @@ CREATE TABLE IF NOT EXISTS user (
   email text UNIQUE,
   emailVerified text,
   image text,
-  password text
+  password text,
+  status text NOT NULL DEFAULT 'pending' CHECK(status IN ('active', 'pending', 'suspended')),
+  theme text DEFAULT 'system',
+  density text DEFAULT 'comfortable',
+  created_at text NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS session (
@@ -49,8 +53,11 @@ CREATE TABLE IF NOT EXISTS memberships (
   workspace_id text NOT NULL,
   user_id text NOT NULL,
   role text NOT NULL DEFAULT 'member',
-  created_at text NOT NULL
+  created_at text NOT NULL,
+  updated_at text NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS memberships_workspace_user_unique ON memberships(workspace_id, user_id);
 
 CREATE TABLE IF NOT EXISTS agents (
   id text PRIMARY KEY NOT NULL,
@@ -155,7 +162,7 @@ CREATE TABLE IF NOT EXISTS analytics_events (
 
 CREATE TABLE IF NOT EXISTS invitations (
   id text PRIMARY KEY NOT NULL,
-  workspace_id text NOT NULL,
+  workspace_id text NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   email text NOT NULL,
   invited_by_user_id text NOT NULL,
   role text NOT NULL DEFAULT 'member',
@@ -171,7 +178,7 @@ CREATE INDEX IF NOT EXISTS idx_invitations_workspace_email ON invitations(worksp
 
 CREATE TABLE IF NOT EXISTS user_sessions (
   id text PRIMARY KEY NOT NULL,
-  user_id text NOT NULL,
+  user_id text NOT NULL REFERENCES user(id) ON DELETE CASCADE,
   token text NOT NULL UNIQUE,
   device_name text,
   device_type text,
@@ -179,7 +186,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
   os text,
   ip_address text,
   location text,
-  is_revoked text NOT NULL DEFAULT 'false',
+  is_revoked integer NOT NULL DEFAULT 0,
   last_active_at text NOT NULL,
   created_at text NOT NULL,
   expires_at text NOT NULL
@@ -188,10 +195,3 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 ALTER TABLE workspaces ADD COLUMN description text;
 ALTER TABLE workspaces ADD COLUMN timezone text DEFAULT 'UTC';
 ALTER TABLE workspaces ADD COLUMN deleted_at text;
-
-ALTER TABLE memberships ADD COLUMN updated_at text;
-
-ALTER TABLE user ADD COLUMN status text NOT NULL DEFAULT 'pending';
-ALTER TABLE user ADD COLUMN theme text DEFAULT 'system';
-ALTER TABLE user ADD COLUMN density text DEFAULT 'comfortable';
-ALTER TABLE user ADD COLUMN created_at text NOT NULL DEFAULT (datetime('now'));

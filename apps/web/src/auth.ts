@@ -14,6 +14,45 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   adapter: DrizzleAdapter(db),
   session: { strategy: "jwt" },
+  callbacks: {
+    ...authConfig.callbacks,
+    async signIn({ user, account }) {
+      if (account?.provider === "credentials") return true
+      if (!user.id) return false
+
+      const { user: userTable } = await import("@chaste-ai/db")
+      const [found] = await db
+        .select({ status: userTable.status })
+        .from(userTable)
+        .where(eq(userTable.id, user.id))
+        .limit(1)
+
+      if (!found) return false
+      if (found.status === "pending" || found.status === "suspended") return false
+
+      return true
+    },
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.sub = user.id
+        const { user: userTable } = await import("@chaste-ai/db")
+        const [found] = await db
+          .select({ status: userTable.status })
+          .from(userTable)
+          .where(eq(userTable.id, user.id))
+          .limit(1)
+        if (found) token.status = found.status
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user && token.sub) {
+        ;(session.user as unknown as Record<string, unknown>).id = token.sub
+        ;(session.user as unknown as Record<string, unknown>).status = token.status
+      }
+      return session
+    },
+  },
   providers: [
     Credentials({
       name: "credentials",

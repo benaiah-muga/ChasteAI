@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import type { LucideIcon } from "lucide-react"
 import {
   LayoutDashboard,
   BarChart3,
@@ -38,7 +39,7 @@ function NavLink({
 }: {
   href: string
   label: string
-  icon: any
+  icon: LucideIcon
   pathname: string
 }) {
   const active = pathname === href || (pathname.startsWith(href + "/") && href !== "/dashboard")
@@ -109,7 +110,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button className="text-text-muted hover:text-text-primary transition-colors">
+            <button
+              aria-label="Notifications"
+              className="text-text-muted hover:text-text-primary transition-colors"
+            >
               <Bell className="h-5 w-5" />
             </button>
             <div className="bg-surface-elevated ring-border text-text-primary flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ring-1">

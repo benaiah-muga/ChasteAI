@@ -1,12 +1,15 @@
 import { sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { id, timestampNow } from "./helpers"
+import { workspaces } from "./workspaces"
 
 export const invitationStatuses = ["pending", "accepted", "expired", "revoked"] as const
 export type InvitationStatus = (typeof invitationStatuses)[number]
 
 export const invitations = sqliteTable("invitations", {
   id: id(),
-  workspaceId: text("workspace_id").notNull(),
+  workspaceId: text("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
   invitedByUserId: text("invited_by_user_id").notNull(),
   role: text("role").notNull().default("member"),

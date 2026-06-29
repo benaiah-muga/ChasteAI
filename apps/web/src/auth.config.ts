@@ -13,19 +13,10 @@ export const authConfig = {
       if (!isLoggedIn && !isPublic) {
         return Response.redirect(new URL("/signin", nextUrl.origin))
       }
+      if (isLoggedIn && (auth?.user as { status?: string } | undefined)?.status === "suspended") {
+        return Response.redirect(new URL("/signin", nextUrl.origin))
+      }
       return true
-    },
-    session({ session, token }) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub
-      }
-      return session
-    },
-    jwt({ token, user }) {
-      if (user) {
-        token.sub = user.id
-      }
-      return token
     },
   },
   providers: [],
