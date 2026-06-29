@@ -33,11 +33,7 @@ function writeEnvVar(key: string, value: string) {
   writeFileSync(ENV_PATH, content + "\n", "utf-8")
 }
 
-export async function createAccountAction(data: {
-  email: string
-  name: string
-  password: string
-}) {
+export async function createAccountAction(data: { email: string; name: string; password: string }) {
   const { email, name, password } = data
 
   if (!email || !password) return { error: "Email and password are required" }
@@ -49,7 +45,7 @@ export async function createAccountAction(data: {
   try {
     const [created] = await db
       .insert(user)
-      .values({ email, name, password: hashed })
+      .values({ email, name, password: hashed, status: "active" })
       .returning({ id: user.id })
 
     if (!created) return { error: "Failed to create user" }
@@ -64,10 +60,7 @@ export async function createAccountAction(data: {
   return { success: true }
 }
 
-export async function testDbConnectionAction(data: {
-  url: string
-  token?: string
-}) {
+export async function testDbConnectionAction(data: { url: string; token?: string }) {
   try {
     const { url, token } = data
     const dialect = detectDialect(url)
@@ -93,10 +86,7 @@ export async function testDbConnectionAction(data: {
   }
 }
 
-export async function setupDbAction(data: {
-  url: string
-  token?: string
-}) {
+export async function setupDbAction(data: { url: string; token?: string }) {
   try {
     const { url, token } = data
     const dialect = detectDialect(url)

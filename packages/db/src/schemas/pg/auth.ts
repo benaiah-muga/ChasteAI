@@ -1,15 +1,22 @@
 import { pgTable, text, timestamp, primaryKey } from "drizzle-orm/pg-core"
 import type { InferSelectModel } from "drizzle-orm"
 
+export const userStatuses = ["active", "pending", "suspended"] as const
+export type UserStatus = (typeof userStatuses)[number]
+
 export const user = pgTable("user", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   name: text("name"),
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   password: text("password"),
+  status: text("status").notNull().$type<UserStatus>().default("pending"),
   theme: text("theme").default("system"),
   density: text("density").default("comfortable"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
 export const session = pgTable("session", {

@@ -191,5 +191,7 @@ ALTER TABLE workspaces ADD COLUMN deleted_at text;
 
 ALTER TABLE memberships ADD COLUMN updated_at text;
 
+ALTER TABLE user ADD COLUMN status text NOT NULL DEFAULT 'pending';
 ALTER TABLE user ADD COLUMN theme text DEFAULT 'system';
 ALTER TABLE user ADD COLUMN density text DEFAULT 'comfortable';
+ALTER TABLE user ADD COLUMN created_at text NOT NULL DEFAULT (datetime('now'));

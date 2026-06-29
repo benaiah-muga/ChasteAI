@@ -1,16 +1,23 @@
 import { sqliteTable, text, primaryKey } from "drizzle-orm/sqlite-core"
 import type { InferSelectModel } from "drizzle-orm"
-import { timestamp } from "./helpers"
+import { timestamp, timestampNow } from "./helpers"
+
+export const userStatuses = ["active", "pending", "suspended"] as const
+export type UserStatus = (typeof userStatuses)[number]
 
 export const user = sqliteTable("user", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   name: text("name"),
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified"),
   image: text("image"),
   password: text("password"),
+  status: text("status").notNull().$type<UserStatus>().default("pending"),
   theme: text("theme").default("system"),
   density: text("density").default("comfortable"),
+  createdAt: timestampNow("created_at"),
 })
 
 export const session = sqliteTable("session", {
