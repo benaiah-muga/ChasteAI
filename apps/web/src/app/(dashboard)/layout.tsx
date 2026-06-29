@@ -144,6 +144,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <input
                 type="text"
                 placeholder="Search..."
+                aria-label="Search"
                 className="border-border bg-bg text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-accent h-8 w-full rounded-md border pl-9 pr-3 text-sm focus:outline-none focus:ring-1"
               />
               <div className="absolute right-2.5 top-2 flex items-center gap-1">

@@ -78,11 +78,12 @@ export default async function Home() {
         <div className="text-text-muted mt-16 flex flex-col items-center gap-1 text-[11px]">
           <span>Version 0.1.0 &middot; MIT License</span>
           <div className="flex items-center gap-2">
-            <a href="#" className="hover:text-text-secondary transition-colors">
-              Documentation
-            </a>
-            <span>&middot;</span>
-            <a href="#" className="hover:text-text-secondary transition-colors">
+            <a
+              href="https://github.com/benaiah-muga/ChasteAI"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-text-secondary transition-colors"
+            >
               GitHub
             </a>
           </div>

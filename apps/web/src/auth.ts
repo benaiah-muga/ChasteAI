@@ -36,13 +36,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true
     },
     async jwt({ token, user }) {
-      if (user?.id) {
-        token.sub = user.id
+      const userId = user?.id ?? token.sub
+      if (userId) {
+        token.sub = userId
         const { user: userTable } = await import("@chaste-ai/db")
         const [found] = await db
           .select({ status: userTable.status })
           .from(userTable)
-          .where(eq(userTable.id, user.id))
+          .where(eq(userTable.id, userId))
           .limit(1)
         if (found) token.status = found.status
       }
