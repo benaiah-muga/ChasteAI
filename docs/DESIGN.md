@@ -1216,6 +1216,7 @@ gap: 6px;
 │  ⟐  API Keys                   ⌘6   │
 │  ⟐  Documents                  ⌘7   │
 │  ⟐  Team                       ⌘8   │
+│  ⟐  Workspaces                 ⌘9   │
 ├──────────────────────────────────────┤
 │  ⚙  Settings                        │
 └──────────────────────────────────────┘
@@ -1616,20 +1617,21 @@ This is a **welcome surface / launch screen**, not a marketing hero. The differe
 
 #### Navigation Items
 
-| Icon  | Label         | Route                      | Keyboard Shortcut |
-| ----- | ------------- | -------------------------- | ----------------- | --- |
-| Icon  | Label         | Route                      | Keyboard Shortcut |
-| ---   | ---           | ---                        | ---               | --- |
-| Grid  | Overview      | `/dashboard`               | `⌘1`              |
-| Chart | Analytics     | `/dashboard/analytics`     | `⌘2`              |
-| Bot   | Agents        | `/dashboard/agents`        | `⌘3`              |
-| Chat  | Conversations | `/dashboard/conversations` | `⌘4`              |
-| Nodes | Channels      | `/dashboard/channels`      | `⌘5`              |
-| Key   | API Keys      | `/dashboard/api-keys`      | `⌘6`              |
-| File  | Documents     | `/dashboard/documents`     | `⌘7`              |
-| Users | Team          | `/dashboard/team`          | `⌘8`              |
-| —     | —             | —                          | —                 |
-| Gear  | Settings      | `/dashboard/settings`      | —                 |
+| Icon   | Label         | Route                      | Keyboard Shortcut |
+| ------ | ------------- | -------------------------- | ----------------- | --- |
+| Icon   | Label         | Route                      | Keyboard Shortcut |
+| ---    | ---           | ---                        | ---               | --- |
+| Grid   | Overview      | `/dashboard`               | `⌘1`              |
+| Chart  | Analytics     | `/dashboard/analytics`     | `⌘2`              |
+| Bot    | Agents        | `/dashboard/agents`        | `⌘3`              |
+| Chat   | Conversations | `/dashboard/conversations` | `⌘4`              |
+| Nodes  | Channels      | `/dashboard/channels`      | `⌘5`              |
+| Key    | API Keys      | `/dashboard/api-keys`      | `⌘6`              |
+| File   | Documents     | `/dashboard/documents`     | `⌘7`              |
+| Users  | Team          | `/dashboard/team`          | `⌘8`              |
+| Layers | Workspaces    | `/dashboard/workspaces`    | `⌘9`              |
+| —      | —             | —                          | —                 |
+| Gear   | Settings      | `/dashboard/settings`      | —                 |
 
 #### Global Search (⌘K)
 

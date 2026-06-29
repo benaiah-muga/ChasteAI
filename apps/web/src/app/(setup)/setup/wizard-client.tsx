@@ -1,8 +1,18 @@
 "use client"
 
 import { useState } from "react"
+import { Check, Loader2 } from "lucide-react"
 import { ExpandableError } from "./expandable-error"
-import { createAccountAction, testDbConnectionAction, testProviderConnectionAction, finalizeSetupAction } from "@/lib/actions/setup"
+import {
+  createAccountAction,
+  testDbConnectionAction,
+  testProviderConnectionAction,
+  finalizeSetupAction,
+} from "@/lib/actions/setup"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
 const STEPS = ["Account", "Database", "Provider", "Workspace", "Done"]
 
@@ -80,7 +90,11 @@ type WizardData = {
   model: string
 }
 
-type TestState = { status: "idle" | "testing" | "passed" | "failed"; message?: string; details?: string }
+type TestState = {
+  status: "idle" | "testing" | "passed" | "failed"
+  message?: string
+  details?: string
+}
 
 export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
   const [step, setStep] = useState(initialDbUrl ? 1 : 2)
@@ -130,7 +144,11 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
     if ("success" in result && result.success) {
       setDbTest({ status: "passed" })
     } else {
-      setDbTest({ status: "failed", message: result.error ?? "Connection failed", details: (result as any).details })
+      setDbTest({
+        status: "failed",
+        message: result.error ?? "Connection failed",
+        details: (result as any).details,
+      })
     }
   }
 
@@ -171,7 +189,11 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
         return
       }
       setBusy(true)
-      const result = await createAccountAction({ email: data.email, name: data.name, password: data.password })
+      const result = await createAccountAction({
+        email: data.email,
+        name: data.name,
+        password: data.password,
+      })
       setBusy(false)
       if ("error" in result && result.error) {
         setError(result.error)
@@ -224,27 +246,36 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
     setStep((s) => Math.max(s - 1, 1) as any)
   }
 
-  function TestButton({ state, onTest, label }: { state: TestState; onTest: () => void; label: string }) {
+  function TestButton({
+    state,
+    onTest,
+    label,
+  }: {
+    state: TestState
+    onTest: () => void
+    label: string
+  }) {
     return (
       <div className="flex items-center gap-3">
-        <button
+        <Button
           type="button"
           onClick={onTest}
           disabled={state.status === "testing"}
-          className="rounded-lg border border-neutral-600 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 hover:text-white disabled:opacity-50"
+          variant="secondary"
+          size="sm"
         >
           {state.status === "testing" ? (
             <span className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
+              <Loader2 className="h-4 w-4 animate-spin" />
               Testing...
             </span>
           ) : (
             label
           )}
-        </button>
-        {state.status === "passed" && <span className="text-sm text-green-400">Connected</span>}
+        </Button>
+        {state.status === "passed" && <Badge variant="success">Connected</Badge>}
         {state.status === "failed" && state.message && (
-          <span className="text-sm text-red-400">{state.message}</span>
+          <span className="text-danger-text text-sm">{state.message}</span>
         )}
         {state.status === "failed" && state.details && (
           <ExpandableError message={state.message ?? ""} details={state.details} />
@@ -254,57 +285,86 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
   }
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl">
-      <div className="border-b border-neutral-800 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-white">ChasteAI</span>
-          <span className="text-xs text-neutral-500">Step {step} of {STEPS.length}</span>
+    <Card className="mx-auto w-full max-w-xl shadow-2xl">
+      <CardHeader className="border-border border-b p-6 pb-4">
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-text-primary text-sm font-semibold">ChasteAI Setup</span>
+          <span className="text-text-muted text-xs">
+            Step {step} of {STEPS.length}
+          </span>
         </div>
-        <div className="mt-3 flex items-center gap-1">
+        <div className="flex w-full items-center gap-1">
           {STEPS.map((label, i) => {
             const idx = i + 1
             const active = idx === step
             const done = idx < step
             return (
-              <div key={label} className="flex items-center gap-1 flex-1">
+              <div key={label} className="flex flex-1 items-center gap-1">
                 <div
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${
-                    active ? "bg-indigo-600 text-white" : done ? "bg-indigo-950 text-indigo-400" : "bg-neutral-800 text-neutral-500"
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-medium transition-colors ${
+                    active
+                      ? "bg-accent text-accent-text"
+                      : done
+                        ? "bg-accent-subtle text-accent-strong"
+                        : "bg-surface-elevated text-text-muted border-border border"
                   }`}
                 >
-                  {done ? "✓" : idx}
+                  {done ? <Check className="h-3 w-3" /> : idx}
                 </div>
-                {idx < STEPS.length && <div className={`h-px flex-1 ${done ? "bg-indigo-800" : "bg-neutral-800"}`} />}
+                {idx < STEPS.length && (
+                  <div
+                    className={`h-[2px] flex-1 transition-colors ${done ? "bg-accent-subtle" : "bg-surface-elevated"}`}
+                  />
+                )}
               </div>
             )
           })}
         </div>
-      </div>
+      </CardHeader>
 
-      <div className="px-6 py-6">
+      <CardContent className="p-6">
         {step === 1 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-white">Create your account</h2>
-              <p className="mt-1 text-sm text-neutral-400">This will be your admin account.</p>
+              <h2 className="text-text-primary text-lg font-semibold">Create your account</h2>
+              <p className="text-text-tertiary mt-1 text-[13px]">
+                This will be your admin account.
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">Email</label>
-              <input type="email" value={data.email} onChange={(e) => update({ email: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-indigo-500 focus:outline-none"
-                placeholder="admin@example.com" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">Name</label>
-              <input type="text" value={data.name} onChange={(e) => update({ name: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-indigo-500 focus:outline-none"
-                placeholder="Admin" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">Password</label>
-              <input type="password" value={data.password} onChange={(e) => update({ password: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-indigo-500 focus:outline-none"
-                placeholder="At least 8 characters" />
+            <div className="space-y-3">
+              <div>
+                <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                  Email
+                </label>
+                <Input
+                  type="email"
+                  value={data.email}
+                  onChange={(e) => update({ email: e.target.value })}
+                  placeholder="admin@example.com"
+                />
+              </div>
+              <div>
+                <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                  Name
+                </label>
+                <Input
+                  type="text"
+                  value={data.name}
+                  onChange={(e) => update({ name: e.target.value })}
+                  placeholder="Admin"
+                />
+              </div>
+              <div>
+                <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                  Password
+                </label>
+                <Input
+                  type="password"
+                  value={data.password}
+                  onChange={(e) => update({ password: e.target.value })}
+                  placeholder="At least 8 characters"
+                />
+              </div>
             </div>
           </div>
         )}
@@ -312,28 +372,32 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
         {step === 2 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-white">Database</h2>
-              <p className="mt-1 text-sm text-neutral-400">
+              <h2 className="text-text-primary text-lg font-semibold">Database</h2>
+              <p className="text-text-tertiary mt-1 text-[13px]">
                 {initialDbUrl
                   ? "Database configured via terminal. Test the connection to verify."
                   : "Run pnpm setup:db in your terminal to configure a database."}
               </p>
             </div>
             {initialDbUrl ? (
-              <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-3">
-                <p className="text-xs font-medium text-neutral-400">Connection string</p>
-                <p className="mt-1 text-sm text-neutral-200 font-mono truncate">{initialDbUrl}</p>
-                <div className="mt-3">
+              <div className="border-border bg-surface-elevated rounded-lg border p-4">
+                <p className="text-text-secondary text-xs font-medium">Connection string</p>
+                <p className="text-text-primary mt-1 truncate font-mono text-sm">{initialDbUrl}</p>
+                <div className="mt-4">
                   <TestButton state={dbTest} onTest={testDb} label="Test Connection" />
                 </div>
-                <p className="mt-3 text-xs text-neutral-500">
+                <p className="text-text-muted mt-4 text-[13px]">
                   You can migrate to PostgreSQL later from your dashboard settings.
                 </p>
               </div>
             ) : (
-              <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-4 text-center">
-                <p className="text-sm text-neutral-300">
-                  Run <code className="rounded bg-neutral-700 px-1.5 py-0.5 text-xs text-indigo-300">pnpm setup:db</code> to set up SQLite or Turso.
+              <div className="border-border bg-surface-elevated rounded-lg border p-4 text-center">
+                <p className="text-text-secondary text-sm">
+                  Run{" "}
+                  <code className="bg-surface-high text-accent rounded px-1.5 py-0.5 text-xs">
+                    pnpm setup:db
+                  </code>{" "}
+                  to set up SQLite or Turso.
                 </p>
               </div>
             )}
@@ -343,154 +407,169 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-white">AI Provider</h2>
-              <p className="mt-1 text-sm text-neutral-400">Select a provider and enter your API key. Test the connection before continuing.</p>
+              <h2 className="text-text-primary text-lg font-semibold">AI Provider</h2>
+              <p className="text-text-tertiary mt-1 text-[13px]">
+                Select a provider and enter your API key. Test the connection before continuing.
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">Provider</label>
-              <select
-                value={data.providerPreset}
-                onChange={(e) => handlePresetChange(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
-              >
-                {PROVIDER_PRESETS.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
-            </div>
-            {data.providerPreset === "custom" && (
+            <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-neutral-300">Base URL</label>
-                <input type="text" value={data.baseUrl} onChange={(e) => update({ baseUrl: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-indigo-500 focus:outline-none"
-                  placeholder="https://api.openai.com/v1" />
+                <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                  Provider
+                </label>
+                <select
+                  value={data.providerPreset}
+                  onChange={(e) => handlePresetChange(e.target.value)}
+                  className="border-border bg-surface focus-visible:ring-accent focus-visible:border-accent flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2"
+                >
+                  {PROVIDER_PRESETS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">API Key</label>
-              <input type="password" value={data.apiKey} onChange={(e) => update({ apiKey: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-indigo-500 focus:outline-none"
-                placeholder="sk-..." />
-            </div>
-            {(data.providerPreset === "custom" || data.baseUrl) && (
+              {data.providerPreset === "custom" && (
+                <div>
+                  <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                    Base URL
+                  </label>
+                  <Input
+                    type="text"
+                    value={data.baseUrl}
+                    onChange={(e) => update({ baseUrl: e.target.value })}
+                    placeholder="https://api.openai.com/v1"
+                  />
+                </div>
+              )}
               <div>
-                <label className="block text-sm font-medium text-neutral-300">Model</label>
-                <input type="text" value={data.model} onChange={(e) => update({ model: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-indigo-500 focus:outline-none"
-                  placeholder="gpt-4o" />
+                <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                  API Key
+                </label>
+                <Input
+                  type="password"
+                  value={data.apiKey}
+                  onChange={(e) => update({ apiKey: e.target.value })}
+                  placeholder="sk-..."
+                />
               </div>
-            )}
-            <div className="flex items-center gap-3 pt-1">
-              <button
-                type="button"
-                onClick={testProvider}
-                disabled={providerTest.status === "testing" || !data.apiKey}
-                className="rounded-lg border border-neutral-600 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 hover:text-white disabled:opacity-50"
-              >
-                {providerTest.status === "testing" ? (
-                  <span className="flex items-center gap-2">
-                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
-                    Testing...
-                  </span>
-                ) : (
-                  "Test Connection"
-                )}
-              </button>
-              {providerTest.status === "passed" && <span className="text-sm text-green-400">Connected</span>}
+              {(data.providerPreset === "custom" || data.baseUrl) && (
+                <div>
+                  <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                    Model
+                  </label>
+                  <Input
+                    type="text"
+                    value={data.model}
+                    onChange={(e) => update({ model: e.target.value })}
+                    placeholder="gpt-4o"
+                  />
+                </div>
+              )}
             </div>
-            {providerTest.status === "failed" && (
-              <ExpandableError
-                message={providerTest.message ?? "Connection test failed"}
-                details={providerTest.details ?? "Unknown error"}
-              />
-            )}
+            <div className="mt-2">
+              <TestButton state={providerTest} onTest={testProvider} label="Test Connection" />
+            </div>
           </div>
         )}
 
         {step === 4 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-white">Workspace & Agent</h2>
-              <p className="mt-1 text-sm text-neutral-400">Set up your first workspace and agent.</p>
+              <h2 className="text-text-primary text-lg font-semibold">Workspace & Agent</h2>
+              <p className="text-text-tertiary mt-1 text-[13px]">
+                Set up your first workspace and agent.
+              </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-300">Workspace name</label>
-              <input type="text" value={data.workspaceName} onChange={(e) => update({ workspaceName: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-indigo-500 focus:outline-none" />
+              <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                Workspace name
+              </label>
+              <Input
+                type="text"
+                value={data.workspaceName}
+                onChange={(e) => update({ workspaceName: e.target.value })}
+              />
             </div>
-            <div className="border-t border-neutral-800 pt-4">
-              <h3 className="text-sm font-semibold text-white">First Agent</h3>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">Name</label>
-              <input type="text" value={data.agentName} onChange={(e) => update({ agentName: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-indigo-500 focus:outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">Description</label>
-              <input type="text" value={data.agentDescription} onChange={(e) => update({ agentDescription: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-indigo-500 focus:outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-300">System prompt</label>
-              <textarea value={data.systemPrompt} onChange={(e) => update({ systemPrompt: e.target.value })}
-                rows={3}
-                className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-indigo-500 focus:outline-none"
-                placeholder="You are a helpful support agent..." />
+            <div className="border-border mt-2 border-t pt-4">
+              <h3 className="text-text-primary mb-3 text-sm font-semibold">First Agent</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                    Name
+                  </label>
+                  <Input
+                    type="text"
+                    value={data.agentName}
+                    onChange={(e) => update({ agentName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                    Description
+                  </label>
+                  <Input
+                    type="text"
+                    value={data.agentDescription}
+                    onChange={(e) => update({ agentDescription: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                    System prompt
+                  </label>
+                  <textarea
+                    value={data.systemPrompt}
+                    onChange={(e) => update({ systemPrompt: e.target.value })}
+                    rows={3}
+                    className="border-border bg-surface focus-visible:ring-accent focus-visible:border-accent flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2"
+                    placeholder="You are a helpful support agent..."
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {step === 5 && (
-          <div className="space-y-4 text-center">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-950">
-              <span className="text-2xl text-green-400">✓</span>
+          <div className="space-y-4 py-6 text-center">
+            <div className="bg-success-subtle ring-success-border text-success-text inline-flex h-12 w-12 items-center justify-center rounded-full ring-1">
+              <Check className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">All set!</h2>
-              <p className="mt-1 text-sm text-neutral-400">Your workspace is ready. Click below to go to your dashboard.</p>
+              <h2 className="text-text-primary text-lg font-semibold">All set!</h2>
+              <p className="text-text-tertiary mx-auto mt-2 max-w-sm text-[13px]">
+                Your workspace is ready. Click below to go to your dashboard.
+              </p>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="mt-4">
+          <div className="mt-6">
             {errorDetails ? (
               <ExpandableError message={error} details={errorDetails} />
             ) : (
-              <div className="rounded-lg border border-red-800 bg-red-950/50 p-3">
-                <p className="text-sm text-red-300">{error}</p>
+              <div className="border-danger-border bg-danger-subtle text-danger-text rounded-md border p-3 text-[13px]">
+                {error}
               </div>
             )}
           </div>
         )}
-      </div>
+      </CardContent>
 
-      <div className="flex items-center justify-between border-t border-neutral-800 px-6 py-4">
+      <CardFooter className="border-border bg-surface-elevated flex items-center justify-between rounded-b-lg border-t p-6 pt-4">
         {step > 1 && step < 5 ? (
-          <button type="button" onClick={handleBack} disabled={busy}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-400 hover:text-white disabled:opacity-50">
+          <Button variant="subtle" onClick={handleBack} disabled={busy}>
             Back
-          </button>
+          </Button>
         ) : (
           <div />
         )}
-        <button type="button" onClick={handleNext} disabled={busy}
-          className={`rounded-lg px-6 py-2 text-sm font-medium text-white transition-colors ${
-            busy ? "bg-indigo-800 cursor-wait" : "bg-indigo-600 hover:bg-indigo-500"
-          }`}>
-          {busy ? (
-            <span className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              {step === 5 ? "Finalizing..." : "Working..."}
-            </span>
-          ) : step === 5 ? (
-            "Go to Dashboard"
-          ) : (
-            "Continue"
-          )}
-        </button>
-      </div>
-    </div>
+        <Button onClick={handleNext} disabled={busy} loading={busy}>
+          {step === 5 ? "Go to Dashboard" : "Continue"}
+        </Button>
+      </CardFooter>
+    </Card>
   )
 }

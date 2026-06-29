@@ -1,7 +1,10 @@
 "use client"
 
 import { useActionState } from "react"
+import { AlertCircle } from "lucide-react"
 import { signupAction } from "@/lib/actions/auth"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export function SignUpForm() {
   const [state, formAction, pending] = useActionState(signupAction, { error: "" })
@@ -9,54 +12,51 @@ export function SignUpForm() {
   return (
     <form action={formAction} className="space-y-4">
       {state?.error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {state.error}
+        <div className="border-danger-border bg-danger-subtle text-danger-text flex items-start gap-2 rounded-md border px-3 py-2 text-[13px]">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{state.error}</span>
         </div>
       )}
 
-      <div>
-        <label htmlFor="name" className="block text-sm font-medium">
-          Name
+      <div className="space-y-1">
+        <label htmlFor="name" className="text-text-secondary block text-[13px] font-medium">
+          Name <span className="text-text-muted font-normal">(optional)</span>
         </label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
-        />
+        <Input id="name" name="name" type="text" autoComplete="name" placeholder="Jane Doe" />
       </div>
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium">
+
+      <div className="space-y-1">
+        <label htmlFor="email" className="text-text-secondary block text-[13px] font-medium">
           Email
         </label>
-        <input
+        <Input
           id="email"
           name="email"
           type="email"
           required
-          className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+          autoComplete="email"
+          placeholder="name@example.com"
         />
       </div>
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium">
+
+      <div className="space-y-1">
+        <label htmlFor="password" className="text-text-secondary block text-[13px] font-medium">
           Password
         </label>
-        <input
+        <Input
           id="password"
           name="password"
           type="password"
           required
           minLength={8}
-          className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+          autoComplete="new-password"
+          placeholder="••••••••"
         />
       </div>
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-      >
-        {pending ? "Creating account..." : "Create account"}
-      </button>
+
+      <Button type="submit" loading={pending} className="mt-2 w-full">
+        Create Account
+      </Button>
     </form>
   )
 }

@@ -1,26 +1,25 @@
 import Link from "next/link"
+import { Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export default function PendingApprovalPage() {
   return (
     <div className="flex flex-col items-center gap-6 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-950">
-        <span className="text-2xl text-amber-400">🕐</span>
+      <div className="bg-warning-subtle ring-warning-border flex h-12 w-12 items-center justify-center rounded-full ring-1">
+        <Clock className="text-warning-text h-6 w-6" />
       </div>
 
       <div>
-        <h1 className="text-lg font-semibold text-white">Account pending approval</h1>
-        <p className="mt-2 max-w-sm text-sm leading-relaxed text-neutral-400">
+        <h1 className="text-text-primary text-lg font-semibold">Account pending approval</h1>
+        <p className="text-text-tertiary mt-2 max-w-sm text-[13px] leading-relaxed">
           Your account has been created and is waiting for an admin to review your request. You will
           receive access once approved.
         </p>
       </div>
 
-      <Link
-        href="/signin"
-        className="rounded-lg border border-neutral-700 px-5 py-2 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white"
-      >
-        Back to sign in
-      </Link>
+      <Button asChild variant="secondary">
+        <Link href="/signin">Back to sign in</Link>
+      </Button>
     </div>
   )
 }
