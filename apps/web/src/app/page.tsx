@@ -1,124 +1,94 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
+import { Command, ArrowRight } from "lucide-react"
 import { auth } from "@/auth"
+import { getDatabaseClient, user } from "@chaste-ai/db"
+import { Button } from "@/components/ui/button"
+
+async function isConfigured() {
+  try {
+    const db = getDatabaseClient()
+    const result = await Promise.race([
+      db.select({ id: user.id }).from(user).limit(1),
+      new Promise<undefined>((_, reject) =>
+        setTimeout(() => reject(new Error("Database query timed out")), 5000),
+      ),
+    ])
+    return !!result
+  } catch {
+    return false
+  }
+}
 
 export default async function Home() {
   const session = await auth()
 
+  if (session?.user) {
+    redirect("/dashboard")
+  }
+
+  const configured = await isConfigured()
+  if (configured) {
+    redirect("/signin")
+  }
+
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <header className="flex items-center justify-between border-b border-neutral-200 px-6 py-4">
-        <span className="text-sm font-semibold tracking-tight text-neutral-900">
-          ChasteAI
-        </span>
-        <nav className="flex items-center gap-4">
-          {session?.user ? (
-            <Link
-              href="/dashboard"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
-            >
-              Dashboard
+    <div className="bg-bg relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:32px_32px]" />
+
+      <div className="relative z-10 flex w-full max-w-[440px] flex-col items-center px-6 text-center">
+        <div className="bg-surface-elevated text-accent ring-border mb-6 flex h-12 w-12 items-center justify-center rounded-xl shadow-sm ring-1">
+          <Command className="h-6 w-6" />
+        </div>
+
+        <h1 className="text-text-primary mb-2 text-2xl font-medium tracking-tight">ChasteAI</h1>
+        <p className="text-text-tertiary mb-10 max-w-[320px] text-sm">
+          Open-source AI customer support infrastructure platform
+        </p>
+
+        <div className="w-full space-y-6">
+          <Button asChild size="lg" className="w-full font-medium shadow-md">
+            <Link href="/setup">
+              Initialize Workspace
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
-          ) : (
-            <>
-              <Link
-                href="/signin"
-                className="text-sm font-medium text-neutral-600 hover:text-neutral-900"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/signup"
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
-              >
-                Get started
-              </Link>
-            </>
-          )}
-        </nav>
-      </header>
+          </Button>
 
-      <main className="flex-1">
-        <section className="mx-auto max-w-4xl px-6 pt-24 text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-neutral-900">
-            Open-source AI customer support
-          </h1>
-          <p className="mt-4 text-lg text-neutral-500">
-            Self-host your own AI support infrastructure.
-            Configure providers, deploy agents, and manage conversations.
-          </p>
-        </section>
-
-        <section className="mx-auto mt-16 grid max-w-4xl gap-4 px-6 sm:grid-cols-2">
-          <div className="rounded-xl border border-neutral-200 p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-              <span className="text-lg font-bold">1</span>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="border-border w-full border-t" />
             </div>
-            <h3 className="mt-4 text-sm font-semibold text-neutral-900">Setup</h3>
-            <p className="mt-1 text-sm text-neutral-500">
-              Run the setup wizard to configure your database and create your admin account.
-            </p>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-bg text-text-muted px-2">or</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-2">
             <Link
-              href="/setup"
-              className="mt-3 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              href="/signin"
+              className="text-text-secondary hover:text-text-primary text-[13px] transition-colors"
             >
-              Open setup wizard &rarr;
+              Already configured? &rarr;{" "}
+              <span className="text-text-primary font-medium">Sign In</span>
             </Link>
           </div>
-          <div className="rounded-xl border border-neutral-200 p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 text-green-600">
-              <span className="text-lg font-bold">2</span>
-            </div>
-            <h3 className="mt-4 text-sm font-semibold text-neutral-900">Configure providers</h3>
-            <p className="mt-1 text-sm text-neutral-500">
-              Add your AI provider keys (OpenAI, Groq, or any compatible API).
-            </p>
-          </div>
-          <div className="rounded-xl border border-neutral-200 p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-              <span className="text-lg font-bold">3</span>
-            </div>
-            <h3 className="mt-4 text-sm font-semibold text-neutral-900">Create agents</h3>
-            <p className="mt-1 text-sm text-neutral-500">
-              Design support agents with custom prompts and channel configurations.
-            </p>
-          </div>
-          <div className="rounded-xl border border-neutral-200 p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
-              <span className="text-lg font-bold">4</span>
-            </div>
-            <h3 className="mt-4 text-sm font-semibold text-neutral-900">Deploy & monitor</h3>
-            <p className="mt-1 text-sm text-neutral-500">
-              Embed widgets, connect channels, and monitor conversations in real time.
-            </p>
-          </div>
-        </section>
+        </div>
 
-        <section className="mx-auto mt-16 max-w-4xl px-6 pb-24">
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-6">
-            <h3 className="text-sm font-semibold text-neutral-900">Getting started</h3>
-            <div className="mt-4 space-y-3">
-              <p className="text-sm text-neutral-600">
-                Quick start with SQLite (zero config):
-              </p>
-              <pre className="rounded-lg bg-neutral-900 p-4 text-sm text-neutral-200">
-                {`pnpm setup
-pnpm dev`}
-              </pre>
-              <p className="text-sm text-neutral-500">
-                Then open{" "}
-                <Link href="/setup" className="text-indigo-600 hover:underline">
-                  /setup
-                </Link>{" "}
-                in your browser.
-              </p>
-            </div>
+        <div className="text-text-muted mt-16 flex flex-col items-center gap-1 text-[11px]">
+          <span>Version 0.1.0 &middot; MIT License</span>
+          <div className="flex items-center gap-2">
+            <a
+              href="https://github.com/benaiah-muga/ChasteAI"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-text-secondary transition-colors"
+            >
+              GitHub
+            </a>
           </div>
-        </section>
-      </main>
-
-      <footer className="border-t border-neutral-200 px-6 py-4 text-center text-xs text-neutral-400">
-        ChasteAI &mdash; open-source AI customer support infrastructure
-      </footer>
+        </div>
+      </div>
     </div>
   )
 }

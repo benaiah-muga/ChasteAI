@@ -22,6 +22,34 @@
       "when": 1782398686974,
       "tag": "0002_parched_sleeper",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782724188221,
+      "tag": "0003_sturdy_loners",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782725112897,
+      "tag": "0004_bitter_hannibal_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782725277716,
+      "tag": "0005_goofy_celestials",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782730000000,
+      "tag": "0006_brown_wilderness",
+      "breakpoints": true
     }
   ]
 }

@@ -10,14 +10,10 @@ export const metadata: Metadata = {
   description: "Open-source AI customer support infrastructure",
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.className} suppressHydrationWarning>
-      <body className="bg-white text-[#0f172a] antialiased">
+    <html lang="en" className={inter.className} data-theme="dark" suppressHydrationWarning>
+      <body className="antialiased">
         <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>
     </html>

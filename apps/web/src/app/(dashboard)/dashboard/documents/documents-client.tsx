@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/trpc/react"
+import { Globe, FileText, Plus } from "lucide-react"
 
 type Document = {
   id: string
@@ -19,13 +20,13 @@ type Document = {
 function statusColor(status: string) {
   switch (status) {
     case "ready":
-      return "bg-[#f0fdf4] text-[#16a34a] border-[#bbf7d0]"
+      return "border-[#166534] bg-[#052e16] text-[#86efac]"
     case "processing":
-      return "bg-[#fffbeb] text-[#d97706] border-[#fde68a]"
+      return "border-[#92400e] bg-[#451a03] text-[#fcd34d]"
     case "failed":
-      return "bg-[#fef2f2] text-[#ef4444] border-[#fecaca]"
+      return "border-[#991b1b] bg-[#450a0a] text-[#fca5a5]"
     default:
-      return "bg-[#f1f5f9] text-[#64748b] border-[#e2e8f0]"
+      return "border-border bg-surface-elevated text-text-tertiary"
   }
 }
 
@@ -40,10 +41,18 @@ function timeAgo(date: Date) {
   return `${days}d ago`
 }
 
+function SourceIcon({ type }: { type: string }) {
+  if (type === "website") {
+    return <Globe className="h-5 w-5" />
+  }
+  return <FileText className="h-5 w-5" />
+}
+
 export function DocumentsClient({ documents: initial }: { documents: Document[] }) {
   const router = useRouter()
   const utils = api.useUtils()
   const [showUpload, setShowUpload] = useState(false)
+  const [uploadMode, setUploadMode] = useState<"manual" | "website">("manual")
 
   const deleteDoc = api.document.delete.useMutation({
     onSuccess: () => {
@@ -62,61 +71,82 @@ export function DocumentsClient({ documents: initial }: { documents: Document[] 
     <div className="mx-auto max-w-6xl px-8 py-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#0f172a]">Documents</h1>
-          <p className="mt-1 text-sm text-[#64748b]">
+          <h1 className="text-text-primary text-2xl font-semibold tracking-tight">Documents</h1>
+          <p className="text-text-tertiary mt-1 text-sm">
             Upload and manage knowledge base documents for your agents.
           </p>
         </div>
         <button
-          onClick={() => setShowUpload(!showUpload)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5]"
+          onClick={() => {
+            setShowUpload(!showUpload)
+            setUploadMode("manual")
+          }}
+          className="bg-accent text-accent-text hover:bg-accent-strong inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
         >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
+          <Plus className="h-4 w-4" />
           Upload
         </button>
       </div>
 
       {showUpload && (
-        <UploadForm
-          onDone={() => {
-            setShowUpload(false)
-            utils.document.list.invalidate()
-          }}
-        />
+        <div className="mb-8">
+          <div className="border-border mb-4 flex rounded-lg border p-1">
+            <button
+              onClick={() => setUploadMode("manual")}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                uploadMode === "manual"
+                  ? "bg-surface-active text-text-primary"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              Manual
+            </button>
+            <button
+              onClick={() => setUploadMode("website")}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                uploadMode === "website"
+                  ? "bg-surface-active text-text-primary"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+            >
+              <Globe className="h-4 w-4" />
+              Website
+            </button>
+          </div>
+          {uploadMode === "manual" ? (
+            <UploadForm
+              onDone={() => {
+                setShowUpload(false)
+                utils.document.list.invalidate()
+              }}
+            />
+          ) : (
+            <WebsiteCrawlForm
+              onDone={() => {
+                setShowUpload(false)
+                utils.document.list.invalidate()
+              }}
+            />
+          )}
+        </div>
       )}
 
       {initial.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#e2e8f0] bg-white px-6 py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#eef2ff]">
-            <svg
-              className="h-6 w-6 text-[#6366f1]"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-              />
-            </svg>
+        <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-16">
+          <div className="bg-accent-subtle text-accent mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <FileText className="h-6 w-6" />
           </div>
-          <h3 className="text-base font-semibold text-[#0f172a]">No documents yet</h3>
-          <p className="mt-1 text-sm text-[#64748b]">
-            Upload documents to build a knowledge base for your agents.
+          <h3 className="text-text-primary text-base font-semibold">No documents yet</h3>
+          <p className="text-text-tertiary mt-1 text-sm">
+            Upload documents or crawl a website to build a knowledge base.
           </p>
           <button
-            onClick={() => setShowUpload(true)}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5]"
+            onClick={() => {
+              setShowUpload(true)
+              setUploadMode("manual")
+            }}
+            className="bg-accent text-accent-text hover:bg-accent-strong mt-4 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
           >
             Upload your first document
           </button>
@@ -126,26 +156,14 @@ export function DocumentsClient({ documents: initial }: { documents: Document[] 
           {initial.map((doc) => (
             <div
               key={doc.id}
-              className="group flex items-center gap-4 rounded-xl border border-[#e2e8f0] bg-white p-4 transition-shadow hover:shadow-sm"
+              className="border-border bg-surface group flex items-center gap-4 rounded-xl border p-4 transition-shadow hover:shadow-sm"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef2ff] text-[#6366f1]">
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-                  />
-                </svg>
+              <div className="bg-accent-subtle text-accent flex h-10 w-10 items-center justify-center rounded-lg">
+                <SourceIcon type={doc.sourceType} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[#0f172a]">
+                  <span className="text-text-primary text-sm font-medium">
                     {doc.title || "Untitled"}
                   </span>
                   <span
@@ -153,18 +171,23 @@ export function DocumentsClient({ documents: initial }: { documents: Document[] 
                   >
                     {doc.status}
                   </span>
-                  <span className="text-xs text-[#94a3b8]">{doc.sourceType}</span>
+                  <span className="text-text-muted text-xs">{doc.sourceType}</span>
                 </div>
-                <p className="mt-0.5 text-xs text-[#94a3b8]">
+                <p className="text-text-muted mt-0.5 flex items-center gap-1 text-xs">
                   Uploaded {timeAgo(doc.createdAt)}
-                  {doc.sourceUrl && ` · ${doc.sourceUrl}`}
+                  {doc.sourceUrl && (
+                    <>
+                      <span>·</span>
+                      <span className="inline-flex items-center gap-0.5">{doc.sourceUrl}</span>
+                    </>
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
                 <button
                   onClick={() => handleDelete(doc.id, doc.title ?? "")}
                   disabled={deleteDoc.isPending}
-                  className="text-xs font-medium text-[#ef4444] hover:text-[#dc2626]"
+                  className="text-danger hover:text-danger-text text-xs font-medium"
                 >
                   Delete
                 </button>
@@ -225,14 +248,14 @@ function UploadForm({ onDone }: { onDone: () => void }) {
   const wsList = workspaces?.map(({ workspaces: ws }) => ws) ?? []
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
-      <h3 className="mb-4 text-sm font-semibold text-[#0f172a]">Upload Document</h3>
+    <form onSubmit={handleSubmit} className="border-border bg-surface rounded-xl border p-6">
+      <h3 className="text-text-primary mb-4 text-sm font-semibold">Manual Upload</h3>
 
       <div className="space-y-4">
         <div>
           <label
             htmlFor="doc-workspace"
-            className="mb-1.5 block text-sm font-medium text-[#0f172a]"
+            className="text-text-primary mb-1.5 block text-sm font-medium"
           >
             Workspace
           </label>
@@ -240,7 +263,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
             id="doc-workspace"
             value={workspaceId}
             onChange={(e) => setWorkspaceId(e.target.value)}
-            className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm outline-none focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+            className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
             required
           >
             <option value="">Select workspace</option>
@@ -253,7 +276,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
         </div>
 
         <div>
-          <label htmlFor="doc-title" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+          <label htmlFor="doc-title" className="text-text-primary mb-1.5 block text-sm font-medium">
             Title
           </label>
           <input
@@ -261,14 +284,17 @@ function UploadForm({ onDone }: { onDone: () => void }) {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm outline-none focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+            className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
             placeholder="Product FAQ"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="doc-content" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+          <label
+            htmlFor="doc-content"
+            className="text-text-primary mb-1.5 block text-sm font-medium"
+          >
             Content
           </label>
           <textarea
@@ -276,23 +302,200 @@ function UploadForm({ onDone }: { onDone: () => void }) {
             rows={10}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="block w-full resize-y rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm outline-none focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+            className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full resize-y rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
             placeholder="Paste or type your document content here..."
             required
           />
         </div>
       </div>
 
-      {error && <p className="mt-3 text-sm text-[#ef4444]">{error}</p>}
-      {createDoc.error && <p className="mt-3 text-sm text-[#ef4444]">{createDoc.error.message}</p>}
+      {error && <p className="text-danger-text mt-3 text-sm">{error}</p>}
+      {createDoc.error && (
+        <p className="text-danger-text mt-3 text-sm">{createDoc.error.message}</p>
+      )}
 
       <div className="mt-6 flex items-center gap-3">
         <button
           type="submit"
           disabled={createDoc.isPending || isIngesting || !title || !content || !workspaceId}
-          className="rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5] disabled:opacity-50"
+          className="bg-accent text-accent-text hover:bg-accent-strong inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
         >
           {createDoc.isPending ? "Creating..." : isIngesting ? "Processing..." : "Upload & process"}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function WebsiteCrawlForm({ onDone }: { onDone: () => void }) {
+  const [url, setUrl] = useState("")
+  const [maxPages, setMaxPages] = useState(50)
+  const [maxDepth, setMaxDepth] = useState(2)
+  const [workspaceId, setWorkspaceId] = useState("")
+  const [isCrawling, setIsCrawling] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const { data: workspaces } = api.workspace.list.useQuery()
+  const createDoc = api.document.create.useMutation()
+
+  const wsList = workspaces?.map(({ workspaces: ws }) => ws) ?? []
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!url || !workspaceId) return
+    setIsCrawling(true)
+    setError(null)
+
+    try {
+      const doc = await createDoc.mutateAsync({
+        workspaceId,
+        title: url,
+        sourceType: "website",
+        sourceUrl: url,
+        metadata: {},
+      })
+
+      const res = await fetch("/api/documents/crawl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentId: doc.id,
+          sourceUrl: url,
+          maxPages,
+          maxDepth,
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Crawl failed")
+      }
+
+      onDone()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setIsCrawling(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="border-border bg-surface rounded-xl border p-6">
+      <h3 className="text-text-primary mb-4 text-sm font-semibold">Crawl Website</h3>
+
+      <div className="space-y-4">
+        <div>
+          <label
+            htmlFor="crawl-workspace"
+            className="text-text-primary mb-1.5 block text-sm font-medium"
+          >
+            Workspace
+          </label>
+          <select
+            id="crawl-workspace"
+            value={workspaceId}
+            onChange={(e) => setWorkspaceId(e.target.value)}
+            className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+            required
+          >
+            <option value="">Select workspace</option>
+            {wsList.map((ws) => (
+              <option key={ws.id} value={ws.id}>
+                {ws.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="crawl-url" className="text-text-primary mb-1.5 block text-sm font-medium">
+            Website URL
+          </label>
+          <div className="relative">
+            <Globe className="text-text-muted absolute left-3 top-2.5 h-4 w-4" />
+            <input
+              id="crawl-url"
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border py-2 pl-10 pr-3 text-sm outline-none focus:ring-1"
+              placeholder="https://docs.example.com"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="max-pages"
+              className="text-text-primary mb-1.5 block text-sm font-medium"
+            >
+              Max pages
+            </label>
+            <input
+              id="max-pages"
+              type="number"
+              min={1}
+              max={500}
+              value={maxPages}
+              onChange={(e) => setMaxPages(Number(e.target.value))}
+              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="max-depth"
+              className="text-text-primary mb-1.5 block text-sm font-medium"
+            >
+              Max depth
+            </label>
+            <input
+              id="max-depth"
+              type="number"
+              min={1}
+              max={5}
+              value={maxDepth}
+              onChange={(e) => setMaxDepth(Number(e.target.value))}
+              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+            />
+          </div>
+        </div>
+      </div>
+
+      {error && <p className="text-danger-text mt-3 text-sm">{error}</p>}
+
+      <div className="mt-6 flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={isCrawling || !url || !workspaceId}
+          className="bg-accent text-accent-text hover:bg-accent-strong inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {isCrawling ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+              Crawling...
+            </>
+          ) : (
+            <>
+              <Globe className="h-4 w-4" />
+              Start crawl
+            </>
+          )}
         </button>
       </div>
     </form>

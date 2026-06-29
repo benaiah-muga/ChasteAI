@@ -15,6 +15,7 @@
   "dependencies": {
     "@chaste-ai/ai": "workspace:*",
     "@chaste-ai/db": "workspace:*",
+    "cheerio": "^1.2.0",
     "drizzle-orm": "^0.39.0"
   },
   "devDependencies": {

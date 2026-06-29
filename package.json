@@ -7,8 +7,8 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "test:browser": "agent-browser open http://localhost:3000 && agent-browser snapshot -i",
-    "test:browser:auth": "agent-browser open http://localhost:3000/signin && agent-browser fill '@e1' 'admin@chasteai.dev' && agent-browser fill '@e2' 'password123' && agent-browser click '@e3' && agent-browser snapshot",
+    "test:browser": "agent-browser open http://localhost:3000/signin && agent-browser snapshot -i",
+    "test:browser:auth": "agent-browser open http://localhost:3000/signin && agent-browser fill '@e2' 'admin@chasteai.dev' && agent-browser fill '@e4' 'password123' && agent-browser click '@e5' && agent-browser snapshot",
     "test:browser:install": "agent-browser install",
     "setup": "bash scripts/setup.sh",
     "setup:db": "tsx scripts/setup-tui.ts",
@@ -30,6 +30,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
     "prettier": "^3.4.0",
+    "prettier-plugin-tailwindcss": "^0.6.0",
     "tsx": "^4.19.0",
     "turbo": "^2.4.0",
     "typescript": "^5.7.0"

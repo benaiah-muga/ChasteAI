@@ -1,17 +1,189 @@
 @import "tailwindcss";
 
+/* Theme-scoped variables (set by data-theme attribute) */
+:root,
+[data-theme="dark"] {
+  --theme-bg: #0a0a0b;
+  --theme-surface: #18181b;
+  --theme-surface-elevated: #1e1e22;
+  --theme-surface-high: #27272a;
+  --theme-surface-hover: #2d2d32;
+  --theme-surface-active: #3f3f46;
+
+  --theme-text-primary: #fafafa;
+  --theme-text-secondary: #d4d4d8;
+  --theme-text-tertiary: #a1a1aa;
+  --theme-text-muted: #71717a;
+  --theme-text-inverse: #0a0a0b;
+
+  --theme-border: #2d2d32;
+  --theme-border-hover: #3f3f46;
+  --theme-border-active: #52525b;
+
+  --theme-accent: #818cf8;
+  --theme-accent-strong: #6366f1;
+  --theme-accent-subtle: #1e1b4b;
+  --theme-accent-border: #312e81;
+  --theme-accent-text: #a5b4fc;
+
+  --theme-success: #22c55e;
+  --theme-success-subtle: #052e16;
+  --theme-success-border: #166534;
+  --theme-success-text: #86efac;
+
+  --theme-warning: #f59e0b;
+  --theme-warning-subtle: #451a03;
+  --theme-warning-border: #92400e;
+  --theme-warning-text: #fcd34d;
+
+  --theme-danger: #ef4444;
+  --theme-danger-subtle: #450a0a;
+  --theme-danger-border: #991b1b;
+  --theme-danger-text: #fca5a5;
+
+  --theme-info: #3b82f6;
+  --theme-info-subtle: #0c1929;
+  --theme-info-border: #1d4ed8;
+  --theme-info-text: #93c5fd;
+
+  --theme-shadow-xs: 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --theme-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --theme-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --theme-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --theme-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --theme-shadow-2xl: 0 40px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="light"] {
+  --theme-bg: #ffffff;
+  --theme-surface: #fafafa;
+  --theme-surface-elevated: #f4f4f5;
+  --theme-surface-high: #e4e4e7;
+  --theme-surface-hover: #d4d4d8;
+  --theme-surface-active: #a1a1aa;
+
+  --theme-text-primary: #18181b;
+  --theme-text-secondary: #3f3f46;
+  --theme-text-tertiary: #71717a;
+  --theme-text-muted: #a1a1aa;
+  --theme-text-inverse: #ffffff;
+
+  --theme-border: #e4e4e7;
+  --theme-border-hover: #d4d4d8;
+  --theme-border-active: #a1a1aa;
+
+  --theme-accent: #6366f1;
+  --theme-accent-strong: #4f46e5;
+  --theme-accent-subtle: #eef2ff;
+  --theme-accent-border: #c7d2fe;
+  --theme-accent-text: #4338ca;
+
+  --theme-success: #16a34a;
+  --theme-success-subtle: #f0fdf4;
+  --theme-success-border: #bbf7d0;
+  --theme-success-text: #15803d;
+
+  --theme-warning: #d97706;
+  --theme-warning-subtle: #fffbeb;
+  --theme-warning-border: #fde68a;
+  --theme-warning-text: #92400e;
+
+  --theme-danger: #dc2626;
+  --theme-danger-subtle: #fef2f2;
+  --theme-danger-border: #fecaca;
+  --theme-danger-text: #991b1b;
+
+  --theme-info: #2563eb;
+  --theme-info-subtle: #eff6ff;
+  --theme-info-border: #bfdbfe;
+  --theme-info-text: #1e40af;
+
+  --theme-shadow-xs: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --theme-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  --theme-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --theme-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --theme-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --theme-shadow-2xl: 0 40px 50px -12px rgba(0, 0, 0, 0.15);
+}
+
 @theme {
-  --color-accent: #6366f1;
-  --color-accent-hover: #4f46e5;
-  --color-accent-subtle: #eef2ff;
-  --color-accent-border: #c7d2fe;
-  --color-surface: #f8fafc;
-  --color-border: #e2e8f0;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #64748b;
-  --color-success: #22c55e;
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
+  /* Fonts */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
+
+  /* Spacing */
+  --spacing-0-5: 2px;
+  --spacing-1: 4px;
+  --spacing-1-5: 6px;
+  --spacing-2: 8px;
+  --spacing-2-5: 10px;
+  --spacing-3: 12px;
+  --spacing-3-5: 14px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-20: 80px;
+  --spacing-24: 96px;
+
+  /* Backgrounds & Surfaces */
+  --color-bg: var(--theme-bg);
+  --color-surface: var(--theme-surface);
+  --color-surface-elevated: var(--theme-surface-elevated);
+  --color-surface-high: var(--theme-surface-high);
+  --color-surface-hover: var(--theme-surface-hover);
+  --color-surface-active: var(--theme-surface-active);
+
+  /* Text Colors */
+  --color-text-primary: var(--theme-text-primary);
+  --color-text-secondary: var(--theme-text-secondary);
+  --color-text-tertiary: var(--theme-text-tertiary);
+  --color-text-muted: var(--theme-text-muted);
+  --color-text-inverse: var(--theme-text-inverse);
+
+  /* Borders */
+  --color-border: var(--theme-border);
+  --color-border-hover: var(--theme-border-hover);
+  --color-border-active: var(--theme-border-active);
+
+  /* Accents */
+  --color-accent: var(--theme-accent);
+  --color-accent-strong: var(--theme-accent-strong);
+  --color-accent-subtle: var(--theme-accent-subtle);
+  --color-accent-border: var(--theme-accent-border);
+  --color-accent-text: var(--theme-accent-text);
+
+  /* Semantic Colors */
+  --color-success: var(--theme-success);
+  --color-success-subtle: var(--theme-success-subtle);
+  --color-success-border: var(--theme-success-border);
+  --color-success-text: var(--theme-success-text);
+
+  --color-warning: var(--theme-warning);
+  --color-warning-subtle: var(--theme-warning-subtle);
+  --color-warning-border: var(--theme-warning-border);
+  --color-warning-text: var(--theme-warning-text);
+
+  --color-danger: var(--theme-danger);
+  --color-danger-subtle: var(--theme-danger-subtle);
+  --color-danger-border: var(--theme-danger-border);
+  --color-danger-text: var(--theme-danger-text);
+
+  --color-info: var(--theme-info);
+  --color-info-subtle: var(--theme-info-subtle);
+  --color-info-border: var(--theme-info-border);
+  --color-info-text: var(--theme-info-text);
+
+  /* Shadows */
+  --shadow-xs: var(--theme-shadow-xs);
+  --shadow-sm: var(--theme-shadow-sm);
+  --shadow-md: var(--theme-shadow-md);
+  --shadow-lg: var(--theme-shadow-lg);
+  --shadow-xl: var(--theme-shadow-xl);
+  --shadow-2xl: var(--theme-shadow-2xl);
 }
 
 @keyframes pulse-dot {
@@ -21,4 +193,9 @@
 
 .animate-pulse-dot {
   animation: pulse-dot 2s ease-in-out infinite;
+}
+
+body {
+  background-color: var(--theme-bg);
+  color: var(--theme-text-primary);
 }
