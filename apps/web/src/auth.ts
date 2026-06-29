@@ -13,7 +13,10 @@ const db = getDatabaseClient()
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   adapter: DrizzleAdapter(db),
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60, // 7 days default absolute session expiry
+  },
   callbacks: {
     ...authConfig.callbacks,
     async signIn({ user, account }) {

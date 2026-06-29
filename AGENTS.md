@@ -52,7 +52,7 @@ pnpm setup            # Prerequisites check + install + build + TUI DB setup
 pnpm setup:db         # Run only the TUI database setup (SQLite / Turso)
 
 # Testing
-pnpm test:browser              # Run agent-browser smoke test on homepage
+pnpm test:browser              # Run agent-browser smoke test on sign-in page
 pnpm test:browser:auth         # Sign in with seed account and snapshot
 pnpm test:browser:install      # Install Chromium for agent-browser
 
@@ -129,20 +129,22 @@ State management: `WizardData` type holds all form fields. `TestState` type (`{ 
 
 ## Homepage
 
-`apps/web/src/app/page.tsx` is a launchpad dashboard useful for both signed-in and signed-out users. Shows:
+`apps/web/src/app/page.tsx` performs first-run detection. If a user exists in the database:
 
-- Hero with tagline
-- 4-step getting-started cards
-- Quick-start terminal commands
-- Nav with sign-in/sign-up or dashboard link
+- **Signed in** → redirects to `/dashboard`
+- **Not signed in** → redirects to `/signin`
+
+If no user exists (fresh install), shows the setup/launchpad prompt. This replaces the previous manual navigation flow.
 
 ## Auth
 
 - **Strategy**: JWT (not database sessions)
 - **Credentials**: Email + password, hashed with bcryptjs
+- **Session expiry**: Absolute max age of 7 days by default. Configurable idle timeout (auto sign-out after inactivity) and max session length in Settings.
+- **Idle timeout**: `IdleTimeoutProvider` in `apps/web/src/components/idle-timeout-provider.tsx` wraps the dashboard layout. Tracks user activity and signs out silently after configured idle minutes (default 60).
 - **OAuth**: GitHub + Google -- enabled only when `AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET` or `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` are set
 - **Middleware**: `apps/web/src/middleware.ts` protects dashboard routes. `/setup`, `/signin`, `/signup`, `/pending-approval`, `/` are public.
-- **Pages**: `/signin`, `/signup`, and `/pending-approval` at `apps/web/src/app/(auth)/`
+- **Pages**: `/signin`, `/signup`, and `/pending-approval` at `apps/web/src/app/(auth)/`. Full-bleed layout (no card wrapper).
 - **Config**: `auth.config.ts` (edge-compatible) + `auth.ts` (full config with providers)
 - **User status**: `user` table has `status` column (`"active" | "pending" | "suspended"`, default `"pending"`). First user created via signup or setup wizard gets `status: "active"`. Subsequent signups get `status: "pending"` and are redirected to `/pending-approval`.
 - **Admin approval**: Pending users cannot sign in (`authorize` callback + `signinAction` both block `pending` and `suspended`). Admins approve via server actions in `apps/web/src/lib/actions/admin.ts`: `approveUserAction` (sets active + creates membership), `denyUserAction` (sets suspended). Team page at `/dashboard/team` shows pending approvals queue with workspace/role selector modal.
@@ -199,16 +201,20 @@ All architectural changes MUST be documented in an ADR (enforced by pre-commit h
 - **Tailwind v4**: PostCSS pipeline requires `@tailwindcss/postcss` + `postcss.config.mjs`. Both are in place now.
 - **Server actions**: Form submissions require `multipart/form-data` encoding. Setup uses JSON-formatted server actions (not form actions).
 - **Signup flow**: First user (count === 0) -> `status: "active"` -> auto sign-in -> `redirect("/dashboard")`. Subsequent users -> `status: "pending"` -> `redirect("/pending-approval")`
-- **OpenAI-compatible provider**: Checks `OPENAI_API_KEY` then `GROQ_API_KEY` as fallback
-- **Setup wizard provider presets**: 8 presets in `wizard-client.tsx` — OpenAI, Groq, NVIDIA, Together AI, Fireworks AI, DeepSeek, Mistral AI, Custom. "Custom" shows extra Base URL + Model fields. Selection resets `providerTest` status to "idle".
 - **agent-browser**: Requires Chromium: run `agent-browser install` before first use
 - **SQLite vs PostgreSQL schemas**: Both maintained separately in `schemas/pg/` and `schemas/sqlite/`. Keep in sync when adding tables.
 - **Setup wizard**: Uses server actions in `apps/web/src/lib/actions/setup.ts`. The layout at `(setup)/layout.tsx` has no auth check.
+- **First-run detection**: Homepage detects configured state. Signed in → `/dashboard`. User exists → `/signin`. No user → setup prompt.
+- **Idle timeout**: `IdleTimeoutProvider` wraps dashboard layout. Configurable in Settings page at `/dashboard/settings`.
+- **Page transitions**: Custom `PageLoader` component with morphing ring animation. Loading.tsx files in all route groups.
+- **Mobile sidebar**: Collapsible overlay drawer with hamburger button. Access sidebar via Menu icon in header (mobile only).
+- **Website crawler**: Full site crawler at `packages/rag/src/crawler/`. Docs page has "Website" tab for URL submission. Async with status polling.
+- **Settings page**: `/dashboard/settings` with session timeout toggle, idle timeout (minutes), and max session length (hours) inputs.
+- **Signin/signup pages**: Full-bleed layout (no card wrapper), matching homepage visual style with Command icon branding.
 - **Theme switching**: Not yet implemented. Tracked in ADR-007.
 
 ## Deferred
 
 - **Theme switching**: ADR-007 documents the plan. CSS variable approach with `data-theme` attribute + `localStorage` persistence.
 - **PostgreSQL guided install in wizard**: Step 2 currently shows TUI config. Future: guided install with OS detection and step-by-step instructions.
-- **First-run detection**: No auto-redirect to setup yet. The setup flow is driven by `pnpm setup` + manual browser navigation.
 - **SQLite migration via Drizzle Kit**: Currently using raw SQL. Could use a second `drizzle.config.sqlite.ts` for proper migration generation.

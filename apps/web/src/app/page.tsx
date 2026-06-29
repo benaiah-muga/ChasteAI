@@ -1,14 +1,39 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { Command, ArrowRight } from "lucide-react"
 import { auth } from "@/auth"
+import { getDatabaseClient, user } from "@chaste-ai/db"
 import { Button } from "@/components/ui/button"
+
+async function isConfigured() {
+  try {
+    const db = getDatabaseClient()
+    const result = await Promise.race([
+      db.select({ id: user.id }).from(user).limit(1),
+      new Promise<undefined>((_, reject) =>
+        setTimeout(() => reject(new Error("Database query timed out")), 5000),
+      ),
+    ])
+    return !!result
+  } catch {
+    return false
+  }
+}
 
 export default async function Home() {
   const session = await auth()
 
+  if (session?.user) {
+    redirect("/dashboard")
+  }
+
+  const configured = await isConfigured()
+  if (configured) {
+    redirect("/signin")
+  }
+
   return (
     <div className="bg-bg relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
-      {/* Subtle background effect */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:32px_32px]" />
 
@@ -40,23 +65,13 @@ export default async function Home() {
           </div>
 
           <div className="flex flex-col items-center gap-2">
-            {session?.user ? (
-              <Link
-                href="/dashboard"
-                className="text-text-secondary hover:text-text-primary text-[13px] transition-colors"
-              >
-                Already configured? &rarr;{" "}
-                <span className="text-text-primary font-medium">Open Dashboard</span>
-              </Link>
-            ) : (
-              <Link
-                href="/signin"
-                className="text-text-secondary hover:text-text-primary text-[13px] transition-colors"
-              >
-                Already configured? &rarr;{" "}
-                <span className="text-text-primary font-medium">Sign In</span>
-              </Link>
-            )}
+            <Link
+              href="/signin"
+              className="text-text-secondary hover:text-text-primary text-[13px] transition-colors"
+            >
+              Already configured? &rarr;{" "}
+              <span className="text-text-primary font-medium">Sign In</span>
+            </Link>
           </div>
         </div>
 

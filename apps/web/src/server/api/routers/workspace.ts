@@ -77,10 +77,41 @@ export const workspaceRouter = router({
       return workspace
     }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
+  updateSettings: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        sessionTimeoutEnabled: z.boolean().optional(),
+        idleTimeoutMinutes: z.number().min(1).max(1440).optional(),
+        maxSessionHours: z.number().min(1).max(720).optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.delete(workspaces).where(eq(workspaces.id, input.id))
-      return { success: true }
+      const { id, ...settings } = input
+      const [workspace] = await ctx.db
+        .update(workspaces)
+        .set({ settings: settings as Record<string, unknown> })
+        .where(eq(workspaces.id, id))
+        .returning()
+
+      if (!workspace) {
+        throw new TRPCError({ code: "NOT_FOUND" })
+      }
+      return workspace
+    }),
+
+  getSettings: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const [workspace] = await ctx.db
+        .select({ settings: workspaces.settings })
+        .from(workspaces)
+        .where(eq(workspaces.id, input.id))
+        .limit(1)
+
+      if (!workspace) {
+        throw new TRPCError({ code: "NOT_FOUND" })
+      }
+      return workspace.settings as Record<string, unknown>
     }),
 })

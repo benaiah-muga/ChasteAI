@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Command } from "lucide-react"
 import { SignInForm } from "./signin-form"
 
 const availableProviders = [
@@ -8,11 +9,13 @@ const availableProviders = [
 
 export default function SignInPage() {
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-text-primary text-xl font-semibold">Welcome back</h1>
-        <p className="text-text-tertiary mt-2 text-sm">Sign in to your workspace</p>
+    <div className="flex w-full flex-col items-center text-center">
+      <div className="bg-surface-elevated text-accent ring-border mb-6 flex h-12 w-12 items-center justify-center rounded-xl shadow-sm ring-1">
+        <Command className="h-6 w-6" />
       </div>
+
+      <h1 className="text-text-primary text-xl font-semibold">Welcome back</h1>
+      <p className="text-text-tertiary mt-2 mb-8 text-sm">Sign in to your workspace</p>
 
       <SignInForm oauthProviders={availableProviders} />
 
