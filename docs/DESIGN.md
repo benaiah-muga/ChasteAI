@@ -420,6 +420,7 @@ Uses a 4px base unit with rational increments.
 
 #### Common Animation Patterns
 
+- **Page transitions:** CSS-only concentric ring morphing animation (3 rings, offset rotation + scale pulse, 800ms cycle)
 - **Skeleton loading:** Gentle pulse at 1.5s cycle
 - **Page enter:** Fade-in + subtle translateY(4px → 0) at 200ms
 - **Modal open:** Fade backdrop + scale(0.96 → 1) content at 200ms
@@ -1396,44 +1397,42 @@ This is a **welcome surface / launch screen**, not a marketing hero. The differe
 
 #### Shared Layout
 
-- Dark-themed, centered card layout
+- Dark-themed, full-bleed centered layout (no card wrapper)
 - No sidebar, no navigation chrome
-- Background: subtle dark gradient or grid
-- Card: 400px wide, `--color-surface-elevated`, border, 12px radius
-- Loading/error states: smooth transitions within the card
+- Background: radial gradient + grid pattern (matching homepage)
+- Content: centered column, all elements flush against the background
+- Loading/error states: smooth transitions within the layout
 
 #### Sign In
 
 ```
-┌─────────────────────────────────┐
-│           🔐                    │
-│       Welcome back              │
-│   Sign in to your workspace     │
-│                                 │
-│   Email                         │
-│   ┌────────────────────────┐   │
-│   │                        │   │
-│   └────────────────────────┘   │
-│   Password                      │
-│   ┌────────────────────────┐   │
-│   │                        │   │
-│   └────────────────────────┘   │
-│   ┌────────────────────────┐   │
-│   │   Sign In               │   │
-│   └────────────────────────┘   │
-│                                 │
-│   ─── or continue with ───     │
-│                                 │
-│   [GitHub] [Google]             │
-│                                 │
-│   No account? Create one        │
-│   Forgot password?              │
-└─────────────────────────────────┘
+          🔐
+      Welcome back
+  Sign in to your workspace
+
+  ┌──────────────────────────┐
+  │  Email                   │
+  │                          │
+  └──────────────────────────┘
+  ┌──────────────────────────┐
+  │  Password                │
+  │                          │
+  └──────────────────────────┘
+  ┌──────────────────────────┐
+  │     Sign In              │
+  └──────────────────────────┘
+
+  ─── or continue with ───
+
+    [GitHub]    [Google]
+
+  No account? Create one
+  Forgot password?
 ```
 
 #### Sign Up
 
-- Same card structure
+- Same full-bleed layout (no card wrapper)
 - Fields: Name (optional), Email, Password, Confirm Password
 - Password strength indicator (optional)
 
@@ -1461,7 +1460,7 @@ This is a **welcome surface / launch screen**, not a marketing hero. The differe
 
 #### Pending Approval Page
 
-- Simple centered card, same dark layout as sign-in
+- Simple centered layout, same dark full-bleed styling as sign-in
 - Shows clock/pending icon (24px)
 - Heading: "Account pending approval"
 - Body: "An administrator needs to approve your account before you can sign in."
@@ -2439,9 +2438,9 @@ When the user is the only member (post-setup):
 
 #### Overview
 
-Settings lives at `/dashboard/settings` and is always visible in the sidebar (gear icon, bottom section). It provides personal account management and workspace configuration in a tabbed single-page layout.
+Settings lives at `/dashboard/settings` and is always visible in the sidebar (gear icon, bottom section). **Currently implemented:** a single-page settings view with session timeout controls. The tabbed layout (Account | Workspace | Appearance) described below is the full spec, not yet implemented.
 
-#### Layout
+#### Layout (Spec)
 
 ```
 ── Tab Bar ─────────────────────────────────────
@@ -2455,7 +2454,17 @@ Account | Workspace | Appearance
 - Content: single scrollable area, no nested scrolling
 - Save behavior: individual save buttons per section (no global "Save All")
 
-#### Account Tab
+#### Current Implementation
+
+Settings is a single scrollable page with:
+
+- **Session timeout toggle:** Enable/disable auto sign-out after idle
+- **Idle timeout (minutes):** Configurable duration (default 60) before silent sign-out
+- **Max session length (hours):** Configurable max JWT session duration (default 168 = 7 days)
+
+Values are saved to workspace `settings` JSONB column via tRPC mutation. Idle timeout is enforced client-side via `IdleTimeoutProvider` wrapping the dashboard layout. Max session length is enforced server-side via Auth.js JWT `maxAge`.
+
+#### Account Tab (Spec)
 
 ##### Profile Section
 
