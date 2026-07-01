@@ -2,7 +2,29 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { Plus, Key, Copy, Check, Trash2 } from "lucide-react"
 import { api } from "@/trpc/react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card"
+
+function timeAgo(date: Date) {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
+  if (seconds < 60) return "just now"
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
 
 function KeyCreatedModal({
   name,
@@ -21,232 +43,57 @@ function KeyCreatedModal({
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // clipboard write failed — silently ignore
+      // clipboard write failed
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Escape") onClose()
-  }
-
   return (
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onKeyDown={handleKeyDown}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose()
+      }}
     >
-      <div
+      <Card
+        className="w-full max-w-lg"
         role="dialog"
         aria-modal="true"
         aria-labelledby="key-created-title"
-        className="mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
       >
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#eef2ff]">
-          <svg
-            className="h-6 w-6 text-[#6366f1]"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z"
-            />
-          </svg>
-        </div>
-        <h3 id="key-created-title" className="text-lg font-semibold text-[#0f172a]">
-          API Key Created
-        </h3>
-        <p className="mt-1 text-sm text-[#64748b]">
-          Your key <strong>{name}</strong> is ready. Copy it now — you won&apos;t be able to see it
-          again.
-        </p>
-        <div className="mt-4 rounded-lg bg-[#0f172a] p-3">
-          <code className="break-all text-xs text-[#e2e8f0]">{rawKey}</code>
-        </div>
-        <div className="mt-4 flex items-center gap-3">
-          <button
-            onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5]"
-          >
-            {copied ? "Copied!" : "Copy to clipboard"}
-          </button>
-          <button
-            onClick={onClose}
-            className="text-sm font-medium text-[#64748b] hover:text-[#0f172a]"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function timeAgo(date: Date) {
-  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-  if (seconds < 60) return "just now"
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
-
-export function ApiKeysClient() {
-  const router = useRouter()
-  const utils = api.useUtils()
-  const [showNew, setShowNew] = useState(false)
-  const [createdKey, setCreatedKey] = useState<{ name: string; rawKey: string } | null>(null)
-
-  const { data: keys, isLoading } = api.apiKey.list.useQuery()
-  const deleteKey = api.apiKey.delete.useMutation({
-    onSuccess: () => {
-      utils.apiKey.list.invalidate()
-      router.refresh()
-    },
-  })
-
-  function handleDelete(id: string, name: string) {
-    if (confirm(`Delete API key "${name}"? This action cannot be undone.`)) {
-      deleteKey.mutate({ id })
-    }
-  }
-
-  return (
-    <div className="mx-auto max-w-4xl px-8 py-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#0f172a]">API Keys</h1>
-          <p className="mt-1 text-sm text-[#64748b]">
-            Manage API keys for programmatic access to your agents.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowNew(!showNew)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5]"
-        >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          New key
-        </button>
-      </div>
-
-      {showNew && (
-        <NewKeyForm
-          onCreated={(name, rawKey) => {
-            setShowNew(false)
-            setCreatedKey({ name, rawKey })
-          }}
-        />
-      )}
-
-      {createdKey && (
-        <KeyCreatedModal
-          name={createdKey.name}
-          rawKey={createdKey.rawKey}
-          onClose={() => setCreatedKey(null)}
-        />
-      )}
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <p className="text-sm text-[#94a3b8]">Loading...</p>
-        </div>
-      ) : !keys || keys.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#e2e8f0] bg-white px-6 py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#eef2ff]">
-            <svg
-              className="h-6 w-6 text-[#6366f1]"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z"
-              />
-            </svg>
+        <CardHeader>
+          <div className="bg-accent-subtle text-accent mb-3 flex h-12 w-12 items-center justify-center rounded-full">
+            <Key className="h-6 w-6" />
           </div>
-          <h3 className="text-base font-semibold text-[#0f172a]">No API keys yet</h3>
-          <p className="mt-1 text-sm text-[#64748b]">
-            Create an API key to start integrating with external services.
-          </p>
-          <button
-            onClick={() => setShowNew(true)}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5]"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Create your first key
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {keys.map((key) => (
-            <div
-              key={key.id}
-              className="group flex items-center gap-4 rounded-xl border border-[#e2e8f0] bg-white p-4 transition-shadow hover:shadow-sm"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef2ff] text-[#6366f1]">
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z"
-                  />
-                </svg>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[#0f172a]">{key.name}</span>
-                  <code className="rounded bg-[#f1f5f9] px-1.5 py-0.5 font-mono text-xs text-[#64748b]">
-                    {key.keyPrefix}...
-                  </code>
-                </div>
-                <p className="mt-0.5 text-xs text-[#94a3b8]">
-                  Created {timeAgo(key.createdAt)} · {key.scopes.join(", ")}
-                  {key.expiresAt && ` · Expires ${new Date(key.expiresAt).toLocaleDateString()}`}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
-                <button
-                  onClick={() => handleDelete(key.id, key.name)}
-                  disabled={deleteKey.isPending}
-                  className="text-xs font-medium text-[#ef4444] hover:text-[#dc2626]"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+          <CardTitle id="key-created-title">API Key Created</CardTitle>
+          <CardDescription>
+            Your key <strong>{name}</strong> is ready. Copy it now — you won&apos;t be able to see
+            it again.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-bg rounded-lg p-3">
+            <code className="text-text-primary break-all text-xs">{rawKey}</code>
+          </div>
+        </CardContent>
+        <CardFooter className="flex items-center gap-3">
+          <Button onClick={handleCopy}>
+            {copied ? (
+              <>
+                <Check className="mr-1.5 h-4 w-4" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="mr-1.5 h-4 w-4" />
+                Copy to clipboard
+              </>
+            )}
+          </Button>
+          <Button variant="subtle" onClick={onClose}>
+            Done
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   )
 }
@@ -255,7 +102,7 @@ function NewKeyForm({ onCreated }: { onCreated: (name: string, rawKey: string) =
   const utils = api.useUtils()
   const [name, setName] = useState("")
   const [scopes, setScopes] = useState<string[]>(["read"])
-  const [workspaceId, setWorkspaceId] = useState<string>("")
+  const [workspaceId, setWorkspaceId] = useState("")
 
   const { data: workspaces } = api.workspace.list.useQuery()
   const createKey = api.apiKey.create.useMutation({
@@ -280,77 +127,208 @@ function NewKeyForm({ onCreated }: { onCreated: (name: string, rawKey: string) =
   const wsList = workspaces?.map(({ workspaces: ws }) => ws) ?? []
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
-      <h3 className="mb-4 text-sm font-semibold text-[#0f172a]">Create API Key</h3>
-
-      <div className="space-y-4">
-        <div>
-          <label
-            htmlFor="key-workspace"
-            className="mb-1.5 block text-sm font-medium text-[#0f172a]"
-          >
-            Workspace
-          </label>
-          <select
-            id="key-workspace"
-            value={workspaceId}
-            onChange={(e) => setWorkspaceId(e.target.value)}
-            className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm outline-none focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
-            required
-          >
-            <option value="">Select workspace</option>
-            {wsList.map((ws) => (
-              <option key={ws.id} value={ws.id}>
-                {ws.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="key-name" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
-            Name
-          </label>
-          <input
-            id="key-name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm outline-none focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
-            placeholder="Production API Key"
-            required
-          />
-        </div>
-
-        <div>
-          <span className="mb-1.5 block text-sm font-medium text-[#0f172a]">Scopes</span>
-          <div className="flex gap-3">
-            {["read", "write", "admin"].map((scope) => (
-              <label key={scope} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={scopes.includes(scope)}
-                  onChange={() => toggleScope(scope)}
-                  className="rounded border-[#e2e8f0] text-[#6366f1] focus:ring-[#6366f1]"
-                />
-                {scope.charAt(0).toUpperCase() + scope.slice(1)}
-              </label>
-            ))}
+    <Card>
+      <CardHeader>
+        <CardTitle>Create API Key</CardTitle>
+      </CardHeader>
+      <form onSubmit={handleSubmit}>
+        <CardContent className="space-y-4">
+          <div>
+            <label
+              htmlFor="key-workspace"
+              className="text-text-primary mb-1.5 block text-sm font-medium"
+            >
+              Workspace
+            </label>
+            <select
+              id="key-workspace"
+              value={workspaceId}
+              onChange={(e) => setWorkspaceId(e.target.value)}
+              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+              required
+            >
+              <option value="">Select workspace</option>
+              {wsList.map((ws) => (
+                <option key={ws.id} value={ws.id}>
+                  {ws.name}
+                </option>
+              ))}
+            </select>
           </div>
+          <div>
+            <label
+              htmlFor="key-name"
+              className="text-text-primary mb-1.5 block text-sm font-medium"
+            >
+              Name
+            </label>
+            <Input
+              id="key-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Production API Key"
+              required
+            />
+          </div>
+          <div>
+            <span className="text-text-primary mb-1.5 block text-sm font-medium">Scopes</span>
+            <div className="flex gap-4">
+              {["read", "write", "admin"].map((scope) => (
+                <label key={scope} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={scopes.includes(scope)}
+                    onChange={() => toggleScope(scope)}
+                    className="border-border text-accent focus:ring-accent rounded"
+                  />
+                  <span className="text-text-primary">
+                    {scope.charAt(0).toUpperCase() + scope.slice(1)}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+          {createKey.error && <p className="text-danger text-sm">{createKey.error.message}</p>}
+        </CardContent>
+        <CardFooter>
+          <Button
+            type="submit"
+            disabled={createKey.isPending || !name || !workspaceId || scopes.length === 0}
+          >
+            {createKey.isPending ? "Creating..." : "Create key"}
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
+  )
+}
+
+function SkeletonRow() {
+  return (
+    <div className="border-border bg-surface flex items-center gap-4 rounded-xl border p-4">
+      <div className="bg-surface-elevated h-10 w-10 animate-pulse rounded-lg" />
+      <div className="flex-1 space-y-2">
+        <div className="bg-surface-elevated h-4 w-40 animate-pulse rounded" />
+        <div className="bg-surface-elevated h-3 w-56 animate-pulse rounded" />
+      </div>
+      <div className="bg-surface-elevated h-8 w-16 animate-pulse rounded-lg" />
+    </div>
+  )
+}
+
+export function ApiKeysClient() {
+  const router = useRouter()
+  const utils = api.useUtils()
+  const [showNew, setShowNew] = useState(false)
+  const [createdKey, setCreatedKey] = useState<{ name: string; rawKey: string } | null>(null)
+
+  const { data: keys, isLoading } = api.apiKey.list.useQuery()
+  const deleteKey = api.apiKey.delete.useMutation({
+    onSuccess: () => {
+      utils.apiKey.list.invalidate()
+      router.refresh()
+    },
+  })
+
+  function handleDelete(id: string, name: string) {
+    if (confirm(`Delete API key "${name}"? This action cannot be undone.`)) {
+      deleteKey.mutate({ id })
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-text-primary text-lg font-semibold tracking-tight">API Keys</h1>
+          <p className="text-text-tertiary mt-0.5 text-xs">
+            Manage API keys for programmatic access to your agents.
+          </p>
         </div>
+        <Button onClick={() => setShowNew(!showNew)}>
+          <Plus className="mr-1.5 h-4 w-4" />
+          New key
+        </Button>
       </div>
 
-      {createKey.error && <p className="mt-3 text-sm text-[#ef4444]">{createKey.error.message}</p>}
+      {showNew && (
+        <NewKeyForm
+          onCreated={(name, rawKey) => {
+            setShowNew(false)
+            setCreatedKey({ name, rawKey })
+          }}
+        />
+      )}
 
-      <div className="mt-6 flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={createKey.isPending || !name || !workspaceId || scopes.length === 0}
-          className="rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5] disabled:opacity-50"
-        >
-          {createKey.isPending ? "Creating..." : "Create key"}
-        </button>
-      </div>
-    </form>
+      {createdKey && (
+        <KeyCreatedModal
+          name={createdKey.name}
+          rawKey={createdKey.rawKey}
+          onClose={() => setCreatedKey(null)}
+        />
+      )}
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <SkeletonRow key={i} />
+          ))}
+        </div>
+      ) : !keys || keys.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center py-16 text-center">
+            <div className="bg-accent-subtle text-accent mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+              <Key className="h-6 w-6" />
+            </div>
+            <CardTitle className="mb-1">No API keys yet</CardTitle>
+            <CardDescription className="mb-6">
+              Create an API key to start integrating with external services.
+            </CardDescription>
+            <Button onClick={() => setShowNew(true)}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Create your first key
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {keys.map((key) => (
+            <div
+              key={key.id}
+              className="border-border bg-surface hover:bg-surface-hover group flex items-center gap-4 rounded-xl border p-4 transition-colors"
+            >
+              <div className="bg-accent-subtle text-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                <Key className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-text-primary text-sm font-medium">{key.name}</span>
+                  <code className="bg-surface-elevated text-text-muted rounded px-1.5 py-0.5 font-mono text-xs">
+                    {key.keyPrefix}...
+                  </code>
+                </div>
+                <p className="text-text-muted mt-0.5 text-xs">
+                  Created {timeAgo(key.createdAt)} &middot; {key.scopes.join(", ")}
+                  {key.expiresAt && (
+                    <> &middot; Expires {new Date(key.expiresAt).toLocaleDateString()}</>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                <Button
+                  variant="danger"
+                  size="xs"
+                  onClick={() => handleDelete(key.id, key.name)}
+                  disabled={deleteKey.isPending}
+                >
+                  <Trash2 className="mr-1 h-3 w-3" />
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

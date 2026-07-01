@@ -11,6 +11,12 @@ const channelTypes = [
   { value: "api", label: "API", description: "Programmatic access via REST API" },
   { value: "slack", label: "Slack", description: "Connect to a Slack workspace" },
   { value: "discord", label: "Discord", description: "Connect to a Discord server" },
+  { value: "telegram", label: "Telegram", description: "Connect via Telegram Bot API" },
+  {
+    value: "whatsapp",
+    label: "WhatsApp",
+    description: "Connect via WhatsApp (Baileys QR pairing)",
+  },
 ]
 
 export function ChannelForm({ agentId }: { agentId: string }) {
@@ -35,7 +41,7 @@ export function ChannelForm({ agentId }: { agentId: string }) {
     createChannel.mutate({
       agentId,
       name,
-      type: type as "widget" | "web" | "api" | "slack" | "discord",
+      type: type as "widget" | "web" | "api" | "slack" | "discord" | "telegram" | "whatsapp",
       isActive,
       config: {},
     })
@@ -50,9 +56,7 @@ export function ChannelForm({ agentId }: { agentId: string }) {
       )}
 
       <div>
-        <label className="mb-3 block text-sm font-medium text-[#0f172a]">
-          Channel type
-        </label>
+        <label className="mb-3 block text-sm font-medium text-[#0f172a]">Channel type</label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {channelTypes.map((ct) => (
             <button

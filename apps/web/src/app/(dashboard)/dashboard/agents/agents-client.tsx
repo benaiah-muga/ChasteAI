@@ -3,7 +3,11 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { Bot, Plus, Search, LayoutGrid, List, Trash2, ExternalLink } from "lucide-react"
 import { api } from "@/trpc/react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 type Agent = {
   id: string
@@ -23,33 +27,47 @@ type Workspace = {
   slug: string
 }
 
-function StatusDot({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    active: "bg-[#22c55e] animate-pulse-dot shadow-[0_0_6px_#22c55e66]",
-    draft: "bg-[#f59e0b]",
-    inactive: "bg-[#94a3b8]",
-  }
-
-  const labelMap: Record<string, string> = {
-    active: "Active",
-    draft: "Draft",
-    inactive: "Inactive",
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-medium text-[#64748b]">
-      <span
-        className={`inline-block h-1.5 w-1.5 rounded-full ${colorMap[status] ?? colorMap.draft}`}
-      />
-      {labelMap[status] ?? status}
-    </span>
-  )
+const statusVariant: Record<string, "success" | "warning" | "neutral"> = {
+  active: "success",
+  draft: "warning",
+  inactive: "neutral",
 }
 
-export function AgentsClient({ agents: initial }: { agents: Agent[]; workspaces: Workspace[] }) {
+function timeAgo(date: Date) {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
+  if (seconds < 60) return "just now"
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+function getProviderLabel(config: Record<string, unknown>) {
+  const provider = (config.provider as string) ?? "openai"
+  const model = (config.model as string) ?? "gpt-4o"
+  const label =
+    provider === "openai"
+      ? "OpenAI"
+      : provider === "openai-compatible"
+        ? "OpenAI Compatible"
+        : provider
+  return `${label} · ${model}`
+}
+
+export function AgentsClient({
+  agents: initial,
+  workspaces: _workspaces,
+}: {
+  agents: Agent[]
+  workspaces: Workspace[]
+}) {
   const router = useRouter()
   const utils = api.useUtils()
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 
   const deleteAgent = api.agent.delete.useMutation({
     onSuccess: () => {
@@ -69,145 +87,212 @@ export function AgentsClient({ agents: initial }: { agents: Agent[]; workspaces:
     }
   }
 
-  function getProviderLabel(config: Record<string, unknown>) {
-    const provider = (config.provider as string) ?? "openai"
-    const model = (config.model as string) ?? "gpt-4o"
-    const label =
-      provider === "openai" ? "OpenAI" :
-      provider === "openai-compatible" ? "OpenAI Compatible" :
-      provider
-    return `${label} · ${model}`
-  }
-
-  function timeAgo(date: Date) {
-    const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-    if (seconds < 60) return "just now"
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `${minutes}m ago`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    return `${days}d ago`
-  }
+  const filtered = initial.filter(
+    (a) =>
+      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      a.description?.toLowerCase().includes(search.toLowerCase()),
+  )
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="mx-auto max-w-6xl space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#0f172a]">Agents</h1>
-          <p className="mt-1 text-sm text-[#64748b]">
+          <h1 className="text-text-primary text-2xl font-semibold tracking-tight">Agents</h1>
+          <p className="text-text-tertiary mt-1 text-sm">
             Configure AI agents that handle conversations across channels.
           </p>
         </div>
-        <Link
-          href="/dashboard/agents/new"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5]"
-        >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          New agent
+        <Link href="/dashboard/agents/new">
+          <Button>
+            <Plus className="mr-1.5 h-4 w-4" />
+            New agent
+          </Button>
         </Link>
       </div>
 
-      {initial.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#e2e8f0] bg-white px-6 py-16">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#eef2ff]">
-            <svg
-              className="h-6 w-6 text-[#6366f1]"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"
-              />
-            </svg>
+      {initial.length > 0 && (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative max-w-xs">
+            <Search className="text-text-muted absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2" />
+            <Input
+              placeholder="Search agents..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
-          <h3 className="text-base font-semibold text-[#0f172a]">No agents yet</h3>
-          <p className="mt-1 text-sm text-[#64748b]">
+          <div className="bg-surface border-border inline-flex rounded-lg border p-0.5">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`rounded-md p-1.5 transition-colors ${
+                viewMode === "grid"
+                  ? "bg-surface-active text-text-primary"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+              aria-label="Grid view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`rounded-md p-1.5 transition-colors ${
+                viewMode === "list"
+                  ? "bg-surface-active text-text-primary"
+                  : "text-text-tertiary hover:text-text-secondary"
+              }`}
+              aria-label="List view"
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {initial.length === 0 ? (
+        <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-16">
+          <div className="bg-accent-subtle text-accent mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <Bot className="h-6 w-6" />
+          </div>
+          <h3 className="text-text-primary text-base font-semibold">No agents yet</h3>
+          <p className="text-text-tertiary mt-1 text-sm">
             Create your first AI agent to start handling conversations.
           </p>
-          <Link
-            href="/dashboard/agents/new"
-            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5]"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Create your first agent
+          <Link href="/dashboard/agents/new" className="mt-4">
+            <Button>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Create your first agent
+            </Button>
           </Link>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {initial.map((agent) => (
+      ) : filtered.length === 0 ? (
+        <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-16">
+          <Search className="text-text-muted mb-3 h-8 w-8" />
+          <h3 className="text-text-primary text-base font-semibold">No results found</h3>
+          <p className="text-text-tertiary mt-1 text-sm">
+            No agents matching &ldquo;{search}&rdquo;.
+          </p>
+        </div>
+      ) : viewMode === "grid" ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((agent) => (
             <div
               key={agent.id}
-              className="group relative rounded-xl border border-[#e2e8f0] bg-white p-5 transition-shadow hover:shadow-sm"
+              className="border-border bg-surface group relative rounded-xl border p-5 transition-shadow hover:shadow-sm"
             >
               <div className="mb-3 flex items-start justify-between">
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/dashboard/agents/${agent.id}`}
-                    className="text-sm font-semibold text-[#0f172a] hover:text-[#6366f1]"
+                    className="text-text-primary hover:text-accent text-sm font-semibold transition-colors"
                   >
                     {agent.name}
                   </Link>
                   {agent.description && (
-                    <p className="mt-0.5 truncate text-xs text-[#64748b]">{agent.description}</p>
+                    <p className="text-text-tertiary mt-0.5 truncate text-xs">
+                      {agent.description}
+                    </p>
                   )}
                 </div>
-                <StatusDot status={agent.status} />
+                <Badge variant={statusVariant[agent.status] ?? "neutral"}>
+                  {agent.status.charAt(0).toUpperCase() + agent.status.slice(1)}
+                </Badge>
               </div>
-              <div className="flex items-center gap-2 text-xs text-[#94a3b8]">
+              <div className="text-text-muted flex items-center gap-2 text-xs">
                 <span>{getProviderLabel(agent.providerConfig)}</span>
                 <span aria-hidden="true">·</span>
                 <span>Updated {timeAgo(agent.updatedAt)}</span>
               </div>
-              <div className="mt-3 flex items-center gap-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+              <div className="border-border mt-4 flex items-center gap-3 border-t pt-3 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
                 <Link
                   href={`/dashboard/agents/${agent.id}`}
-                  className="text-xs font-medium text-[#6366f1] hover:text-[#4f46e5]"
+                  className="text-accent hover:text-accent-strong inline-flex items-center gap-1 text-xs font-medium transition-colors"
                 >
+                  <ExternalLink className="h-3 w-3" />
                   Edit
                 </Link>
-                <span aria-hidden="true" className="text-[#e2e8f0]">
-                  ·
-                </span>
-                <button
-                  onClick={() => handleDelete(agent.id)}
-                  disabled={deleting === agent.id}
-                  className="text-xs font-medium text-[#ef4444] hover:text-[#dc2626] disabled:opacity-50"
-                >
-                  {deleting === agent.id ? "Deleting..." : "Delete"}
-                </button>
-                <span aria-hidden="true" className="text-[#e2e8f0]">
-                  ·
-                </span>
                 <Link
                   href={`/dashboard/agents/${agent.id}/conversations`}
-                  className="text-xs font-medium text-[#64748b] hover:text-[#0f172a]"
+                  className="text-text-tertiary hover:text-text-secondary inline-flex items-center gap-1 text-xs font-medium transition-colors"
                 >
                   Conversations
                 </Link>
+                <button
+                  onClick={() => handleDelete(agent.id)}
+                  disabled={deleting === agent.id}
+                  className="text-danger hover:text-danger-text ml-auto inline-flex items-center gap-1 text-xs font-medium transition-colors disabled:opacity-50"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  {deleting === agent.id ? "Deleting..." : "Delete"}
+                </button>
               </div>
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="border-border bg-surface overflow-hidden rounded-xl border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-border text-text-muted border-b text-left text-xs font-medium">
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="hidden px-4 py-3 sm:table-cell">Provider</th>
+                <th className="hidden px-4 py-3 md:table-cell">Updated</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((agent) => (
+                <tr
+                  key={agent.id}
+                  className="border-border hover:bg-surface-hover border-b transition-colors last:border-0"
+                >
+                  <td className="px-4 py-3">
+                    <div>
+                      <Link
+                        href={`/dashboard/agents/${agent.id}`}
+                        className="text-text-primary hover:text-accent font-medium transition-colors"
+                      >
+                        {agent.name}
+                      </Link>
+                      {agent.description && (
+                        <p className="text-text-tertiary mt-0.5 max-w-[200px] truncate text-xs">
+                          {agent.description}
+                        </p>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant={statusVariant[agent.status] ?? "neutral"}>
+                      {agent.status.charAt(0).toUpperCase() + agent.status.slice(1)}
+                    </Badge>
+                  </td>
+                  <td className="text-text-tertiary hidden px-4 py-3 text-xs sm:table-cell">
+                    {getProviderLabel(agent.providerConfig)}
+                  </td>
+                  <td className="text-text-tertiary hidden px-4 py-3 text-xs md:table-cell">
+                    {timeAgo(agent.updatedAt)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="inline-flex items-center gap-2">
+                      <Link
+                        href={`/dashboard/agents/${agent.id}`}
+                        className="text-accent hover:text-accent-strong text-xs font-medium transition-colors"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(agent.id)}
+                        disabled={deleting === agent.id}
+                        className="text-danger hover:text-danger-text text-xs font-medium transition-colors disabled:opacity-50"
+                      >
+                        {deleting === agent.id ? "..." : "Delete"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

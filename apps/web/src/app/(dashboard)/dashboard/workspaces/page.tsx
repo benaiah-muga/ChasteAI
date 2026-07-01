@@ -1,10 +1,11 @@
-export default function WorkspacesPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[#0f172a]">Workspaces</h1>
-        <p className="mt-1 text-sm text-[#64748b]">Manage your workspaces and team collaboration</p>
-      </div>
-    </div>
-  )
+import { appRouter } from "@/server/api/root"
+import { createTRPCContext } from "@/server/api/trpc"
+import { WorkspacesClient } from "./workspaces-client"
+
+export default async function WorkspacesPage() {
+  const ctx = await createTRPCContext()
+  const caller = appRouter.createCaller(ctx)
+  const workspaces = await caller.workspace.list()
+
+  return <WorkspacesClient workspaces={workspaces} />
 }

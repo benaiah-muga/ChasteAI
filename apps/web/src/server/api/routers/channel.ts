@@ -1,11 +1,30 @@
 import { z } from "zod"
 import { eq, and } from "drizzle-orm"
 import { channels, channelTypes, agents, memberships } from "@chaste-ai/db"
+import {
+  telegramConfigSchema,
+  slackConfigSchema,
+  discordConfigSchema,
+  whatsappConfigSchema,
+  widgetConfigSchema,
+  webConfigSchema,
+  apiConfigSchema,
+} from "@chaste-ai/db"
 import { createInsertSchema } from "drizzle-zod"
 import { TRPCError } from "@trpc/server"
 import { protectedProcedure, router } from "../trpc"
 
-const insertChannelSchema = createInsertSchema(channels, {
+const typeConfigSchemas: Record<string, z.ZodTypeAny> = {
+  telegram: telegramConfigSchema,
+  slack: slackConfigSchema,
+  discord: discordConfigSchema,
+  whatsapp: whatsappConfigSchema,
+  widget: widgetConfigSchema,
+  web: webConfigSchema,
+  api: apiConfigSchema,
+}
+
+const baseChannelSchema = createInsertSchema(channels, {
   type: z.enum(channelTypes),
   config: z.record(z.unknown()).optional(),
 }).pick({
@@ -16,7 +35,22 @@ const insertChannelSchema = createInsertSchema(channels, {
   isActive: true,
 })
 
-const updateChannelSchema = insertChannelSchema.partial().omit({ agentId: true })
+const insertChannelSchema = baseChannelSchema.superRefine((data, ctx) => {
+  if (!data.type) return
+  const configSchema = typeConfigSchemas[data.type]
+  if (!configSchema) return
+  const result = configSchema.safeParse({ ...data.config, type: data.type })
+  if (!result.success) {
+    result.error.issues.forEach((issue) => {
+      ctx.addIssue({
+        ...issue,
+        path: ["config", ...issue.path],
+      })
+    })
+  }
+})
+
+const updateChannelSchema = baseChannelSchema.partial().omit({ agentId: true })
 
 export const channelRouter = router({
   list: protectedProcedure
@@ -225,5 +259,122 @@ export const channelRouter = router({
 
       await ctx.db.delete(channels).where(eq(channels.id, input.id))
       return { success: true }
+    }),
+
+  testConnection: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const [channel] = await ctx.db
+        .select()
+        .from(channels)
+        .where(eq(channels.id, input.id))
+        .limit(1)
+
+      if (!channel) {
+        throw new TRPCError({ code: "NOT_FOUND" })
+      }
+
+      const [agent] = await ctx.db
+        .select()
+        .from(agents)
+        .where(eq(agents.id, channel.agentId))
+        .limit(1)
+
+      if (!agent) {
+        throw new TRPCError({ code: "NOT_FOUND" })
+      }
+
+      const [membership] = await ctx.db
+        .select()
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.workspaceId, agent.workspaceId),
+            eq(memberships.userId, ctx.session.user.id),
+          ),
+        )
+        .limit(1)
+
+      if (!membership) {
+        throw new TRPCError({ code: "FORBIDDEN" })
+      }
+
+      try {
+        const { getChannelProvider } = await import("@chaste-ai/channels")
+        const provider = getChannelProvider(channel.type)
+        return await provider.testConnection(channel.config as Record<string, unknown>)
+      } catch {
+        return { success: false as const, message: "Provider not available" }
+      }
+    }),
+
+  testProviderConfig: protectedProcedure
+    .input(
+      z.object({
+        type: z.enum(channelTypes),
+        config: z.record(z.unknown()),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const { getChannelProvider } = await import("@chaste-ai/channels")
+        const provider = getChannelProvider(input.type)
+        return await provider.testConnection(input.config)
+      } catch {
+        return { success: false as const, message: "Provider not available" }
+      }
+    }),
+
+  getQRCode: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const [channel] = await ctx.db
+        .select()
+        .from(channels)
+        .where(eq(channels.id, input.id))
+        .limit(1)
+
+      if (!channel) {
+        throw new TRPCError({ code: "NOT_FOUND" })
+      }
+
+      const [agent] = await ctx.db
+        .select()
+        .from(agents)
+        .where(eq(agents.id, channel.agentId))
+        .limit(1)
+
+      if (!agent) {
+        throw new TRPCError({ code: "NOT_FOUND" })
+      }
+
+      const [membership] = await ctx.db
+        .select()
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.workspaceId, agent.workspaceId),
+            eq(memberships.userId, ctx.session.user.id),
+          ),
+        )
+        .limit(1)
+
+      if (!membership) {
+        throw new TRPCError({ code: "FORBIDDEN" })
+      }
+
+      if (channel.type !== "whatsapp") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "QR codes are only available for WhatsApp channels",
+        })
+      }
+
+      try {
+        const { getQRCode } = await import("@chaste-ai/channels")
+        return await getQRCode(channel.id)
+      } catch {
+        return null
+      }
     }),
 })

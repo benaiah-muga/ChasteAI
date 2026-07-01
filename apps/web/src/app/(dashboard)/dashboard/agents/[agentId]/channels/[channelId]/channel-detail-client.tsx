@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/trpc/react"
@@ -36,6 +36,20 @@ export function ChannelDetailClient({
   const [name, setName] = useState(initial.name)
   const [isActive, setIsActive] = useState(initial.isActive)
 
+  const [botToken, setBotToken] = useState((initial.config?.botToken as string) ?? "")
+  const [appToken, setAppToken] = useState((initial.config?.appToken as string) ?? "")
+  const [signingSecret, setSigningSecret] = useState(
+    (initial.config?.signingSecret as string) ?? "",
+  )
+  const [applicationId, setApplicationId] = useState(
+    (initial.config?.applicationId as string) ?? "",
+  )
+  const [publicKey, setPublicKey] = useState((initial.config?.publicKey as string) ?? "")
+  const [phoneNumber, setPhoneNumber] = useState((initial.config?.phoneNumber as string) ?? "")
+  const [testResult, setTestResult] = useState<{ success: boolean; message?: string } | null>(null)
+  const [testLoading, setTestLoading] = useState(false)
+  const [qrCode, setQrCode] = useState<string | null>(null)
+
   const updateChannel = api.channel.update.useMutation({
     onSuccess: () => {
       utils.channel.list.invalidate({ agentId })
@@ -52,11 +66,40 @@ export function ChannelDetailClient({
     },
   })
 
+  const testConnection = api.channel.testConnection.useMutation({
+    onSuccess: (result) => setTestResult(result),
+    onError: (error) => setTestResult({ success: false, message: error.message }),
+  })
+
+  const { data: qrData } = api.channel.getQRCode.useQuery(
+    { id: initial.id },
+    { enabled: initial.type === "whatsapp" },
+  )
+
+  useEffect(() => {
+    if (qrData) setQrCode(qrData)
+  }, [qrData])
+
+  function buildConfig(): Record<string, unknown> {
+    switch (initial.type) {
+      case "telegram":
+        return { botToken }
+      case "slack":
+        return { botToken, appToken, signingSecret }
+      case "discord":
+        return { botToken, applicationId, publicKey }
+      case "whatsapp":
+        return { phoneNumber }
+      default:
+        return { ...initial.config }
+    }
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     updateChannel.mutate({
       id: initial.id,
-      data: { name, isActive },
+      data: { name, isActive, config: buildConfig() },
     })
   }
 
@@ -64,6 +107,14 @@ export function ChannelDetailClient({
     if (confirm(`Delete channel "${initial.name}"?`)) {
       deleteChannel.mutate({ id: initial.id })
     }
+  }
+
+  async function handleTestConnection() {
+    setTestLoading(true)
+    setTestResult(null)
+
+    testConnection.mutate({ id: initial.id })
+    setTestLoading(false)
   }
 
   const origin = typeof window !== "undefined" ? window.location.origin : ""
@@ -80,16 +131,165 @@ export function ChannelDetailClient({
 </script>`
       : null
 
+  function renderConfigForm() {
+    switch (initial.type) {
+      case "telegram":
+        return (
+          <div>
+            <label className="text-text-primary mb-1.5 block text-sm font-medium">Bot Token</label>
+            <input
+              type="password"
+              value={botToken}
+              onChange={(e) => setBotToken(e.target.value)}
+              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+              placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+            />
+            <p className="text-text-muted mt-1 text-xs">
+              Create a bot via{" "}
+              <a
+                href="https://t.me/BotFather"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent hover:underline"
+              >
+                @BotFather
+              </a>{" "}
+              and paste the token here.
+            </p>
+          </div>
+        )
+      case "slack":
+        return (
+          <>
+            <div>
+              <label className="text-text-primary mb-1.5 block text-sm font-medium">
+                Bot Token
+              </label>
+              <input
+                type="password"
+                value={botToken}
+                onChange={(e) => setBotToken(e.target.value)}
+                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+                placeholder="xoxb-..."
+              />
+            </div>
+            <div>
+              <label className="text-text-primary mb-1.5 block text-sm font-medium">
+                App Token
+              </label>
+              <input
+                type="password"
+                value={appToken}
+                onChange={(e) => setAppToken(e.target.value)}
+                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+                placeholder="xapp-..."
+              />
+            </div>
+            <div>
+              <label className="text-text-primary mb-1.5 block text-sm font-medium">
+                Signing Secret
+              </label>
+              <input
+                type="password"
+                value={signingSecret}
+                onChange={(e) => setSigningSecret(e.target.value)}
+                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+                placeholder="abc123def456..."
+              />
+            </div>
+            <p className="text-text-muted text-xs">
+              Create a Slack app with Socket Mode enabled, add the bot token and app-level token
+              from your app's settings.
+            </p>
+          </>
+        )
+      case "discord":
+        return (
+          <>
+            <div>
+              <label className="text-text-primary mb-1.5 block text-sm font-medium">
+                Bot Token
+              </label>
+              <input
+                type="password"
+                value={botToken}
+                onChange={(e) => setBotToken(e.target.value)}
+                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+                placeholder="MTE4NzE5..."
+              />
+            </div>
+            <div>
+              <label className="text-text-primary mb-1.5 block text-sm font-medium">
+                Application ID
+              </label>
+              <input
+                type="text"
+                value={applicationId}
+                onChange={(e) => setApplicationId(e.target.value)}
+                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+                placeholder="118719..."
+              />
+            </div>
+            <div>
+              <label className="text-text-primary mb-1.5 block text-sm font-medium">
+                Public Key
+              </label>
+              <input
+                type="text"
+                value={publicKey}
+                onChange={(e) => setPublicKey(e.target.value)}
+                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+                placeholder="abc123def456..."
+              />
+            </div>
+          </>
+        )
+      case "whatsapp":
+        return (
+          <div>
+            <label className="text-text-primary mb-1.5 block text-sm font-medium">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
+              placeholder="1234567890 (with country code, no +)"
+            />
+            <p className="text-text-muted mt-1 text-xs">
+              WhatsApp uses QR code pairing via Baileys. Providing a phone number enables pairing
+              code fallback.
+            </p>
+            {qrCode && (
+              <div className="mt-4">
+                <p className="text-text-primary mb-2 text-xs font-medium">
+                  Scan this QR code with WhatsApp:
+                </p>
+                <img src={qrCode} alt="WhatsApp QR Code" className="mx-auto h-48 w-48 rounded-lg" />
+              </div>
+            )}
+          </div>
+        )
+      case "widget":
+        return null
+      default:
+        return null
+    }
+  }
+
+  const telegramWebhookUrl = `${origin}/api/channels/telegram`
+
   if (isEditing) {
     return (
       <div className="mx-auto max-w-2xl px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-[#0f172a]">Edit channel</h1>
-          <p className="mt-1 text-sm text-[#64748b]">Update channel configuration.</p>
+          <h1 className="text-text-primary text-2xl font-semibold tracking-tight">Edit channel</h1>
+          <p className="text-text-tertiary mt-1 text-sm">Update channel configuration.</p>
         </div>
         <form onSubmit={handleSave} className="space-y-6">
           <div>
-            <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+            <label htmlFor="name" className="text-text-primary mb-1.5 block text-sm font-medium">
               Name
             </label>
             <input
@@ -97,36 +297,43 @@ export function ChannelDetailClient({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm outline-none focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
               required
             />
           </div>
+
           <div>
-            <label htmlFor="is-active" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+            <label
+              htmlFor="is-active"
+              className="text-text-primary mb-1.5 block text-sm font-medium"
+            >
               Status
             </label>
             <select
               id="is-active"
               value={isActive}
               onChange={(e) => setIsActive(e.target.value)}
-              className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm outline-none focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
             >
               <option value="true">Active</option>
               <option value="false">Inactive</option>
             </select>
           </div>
+
+          {renderConfigForm()}
+
           <div className="flex items-center gap-3 pt-2">
             <button
               type="submit"
               disabled={updateChannel.isPending}
-              className="rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white hover:bg-[#4f46e5] disabled:opacity-50"
+              className="bg-accent text-accent-text hover:bg-accent-strong rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {updateChannel.isPending ? "Saving..." : "Save"}
             </button>
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="text-sm font-medium text-[#64748b] hover:text-[#0f172a]"
+              className="text-text-secondary hover:text-text-primary text-sm font-medium"
             >
               Cancel
             </button>
@@ -141,7 +348,7 @@ export function ChannelDetailClient({
       <div className="mb-8">
         <Link
           href={`/dashboard/agents/${agentId}/channels`}
-          className="mb-4 inline-flex items-center gap-1 text-xs font-medium text-[#64748b] hover:text-[#0f172a]"
+          className="text-text-secondary hover:text-text-primary mb-4 inline-flex items-center gap-1 text-xs font-medium"
         >
           <svg
             className="h-3 w-3"
@@ -160,81 +367,118 @@ export function ChannelDetailClient({
         </Link>
       </div>
 
-      <div className="rounded-xl border border-[#e2e8f0] bg-white">
-        <div className="border-b border-[#e2e8f0] px-6 py-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold tracking-tight text-[#0f172a]">
-                  {initial.name}
-                </h1>
-                <span className="rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-medium text-[#64748b]">
-                  {initial.type}
+      <div className="border-border bg-surface rounded-xl border">
+        <div className="border-border flex items-start justify-between border-b px-6 py-5">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-text-primary text-xl font-semibold tracking-tight">
+                {initial.name}
+              </h1>
+              <span className="bg-surface-elevated text-text-secondary rounded-full px-2.5 py-0.5 text-xs font-medium">
+                {initial.type}
+              </span>
+              {initial.isActive === "true" ? (
+                <span className="bg-success-subtle text-success-text inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />
+                  Active
                 </span>
-                {initial.isActive === "true" ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f0fdf4] px-2.5 py-0.5 text-xs font-medium text-[#16a34a]">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
-                    Active
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f1f5f9] px-2.5 py-0.5 text-xs font-medium text-[#94a3b8]">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#94a3b8]" />
-                    Inactive
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-sm text-[#64748b]">Connected to {agent.name}</p>
+              ) : (
+                <span className="bg-surface-elevated text-text-muted inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-current" />
+                  Inactive
+                </span>
+              )}
             </div>
+            <p className="text-text-secondary mt-1 text-sm">Connected to {agent.name}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {initial.type !== "widget" && initial.type !== "web" && initial.type !== "api" && (
+              <button
+                onClick={() => {
+                  handleTestConnection()
+                }}
+                disabled={testLoading}
+                className="text-accent hover:text-accent-strong rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+              >
+                {testLoading ? "Testing..." : "Test Connection"}
+              </button>
+            )}
             <button
               onClick={() => setIsEditing(true)}
-              className="rounded-lg bg-[#6366f1] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#4f46e5]"
+              className="bg-accent text-accent-text hover:bg-accent-strong rounded-lg px-3 py-1.5 text-xs font-medium"
             >
               Edit
             </button>
           </div>
         </div>
 
+        {testResult && (
+          <div
+            className={`border-b px-6 py-3 text-sm ${
+              testResult.success
+                ? "bg-success-subtle text-success-text border-success-border"
+                : "bg-danger-subtle text-danger-text border-danger-border"
+            }`}
+          >
+            {testResult.success
+              ? "Connected successfully"
+              : (testResult.message ?? "Connection failed")}
+          </div>
+        )}
+
         <div className="space-y-6 px-6 py-5 text-sm">
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-[#94a3b8]">Type</dt>
-              <dd className="mt-1 capitalize text-[#0f172a]">{initial.type}</dd>
+              <dt className="text-text-muted text-xs font-medium uppercase tracking-wider">Type</dt>
+              <dd className="text-text-primary mt-1 capitalize">{initial.type}</dd>
             </div>
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-[#94a3b8]">
+              <dt className="text-text-muted text-xs font-medium uppercase tracking-wider">
                 Created
               </dt>
-              <dd className="mt-1 text-[#0f172a]">
+              <dd className="text-text-primary mt-1">
                 {new Date(initial.createdAt).toLocaleDateString()}
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-[#94a3b8]">
+              <dt className="text-text-muted text-xs font-medium uppercase tracking-wider">
                 Updated
               </dt>
-              <dd className="mt-1 text-[#0f172a]">
+              <dd className="text-text-primary mt-1">
                 {new Date(initial.updatedAt).toLocaleDateString()}
               </dd>
             </div>
           </div>
+
+          {initial.type === "telegram" && (
+            <div className="border-border bg-surface-elevated mt-4 rounded-lg border p-4">
+              <h3 className="text-text-primary mb-2 text-sm font-medium">Webhook URL</h3>
+              <p className="text-text-muted mb-2 text-xs">
+                Set this as your webhook URL in Telegram Bot API:
+              </p>
+              <pre className="bg-bg text-text-primary overflow-x-auto rounded-lg p-3 text-xs">
+                {telegramWebhookUrl}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
 
       {embedCode && (
-        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white">
-          <div className="border-b border-[#e2e8f0] px-6 py-4">
-            <h2 className="text-sm font-semibold text-[#0f172a]">Embed snippet</h2>
-            <p className="mt-0.5 text-xs text-[#64748b]">
+        <div className="border-border bg-surface mt-6 rounded-xl border">
+          <div className="border-border border-b px-6 py-4">
+            <h2 className="text-text-primary text-sm font-semibold">Embed snippet</h2>
+            <p className="text-text-tertiary mt-0.5 text-xs">
               Add this code to your website to enable the chat widget.
             </p>
           </div>
           <div className="px-6 py-4">
-            <pre className="overflow-x-auto rounded-lg bg-[#0f172a] p-4 text-xs leading-relaxed text-[#e2e8f0]">
+            <pre className="bg-bg overflow-x-auto rounded-lg p-4 text-xs leading-relaxed text-white">
               <code>{embedCode}</code>
             </pre>
             <button
               onClick={() => navigator.clipboard.writeText(embedCode)}
-              className="mt-3 text-xs font-medium text-[#6366f1] hover:text-[#4f46e5]"
+              className="text-accent hover:text-accent-strong mt-3 text-xs font-medium"
             >
               Copy to clipboard
             </button>
@@ -246,7 +490,7 @@ export function ChannelDetailClient({
         <button
           onClick={handleDelete}
           disabled={deleteChannel.isPending}
-          className="text-xs font-medium text-[#ef4444] hover:text-[#dc2626]"
+          className="text-danger hover:text-danger-text text-xs font-medium"
         >
           {deleteChannel.isPending ? "Deleting..." : "Delete channel"}
         </button>

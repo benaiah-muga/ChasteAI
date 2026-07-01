@@ -1,6 +1,14 @@
 import { pgTable, uuid, text, jsonb, timestamp } from "drizzle-orm/pg-core"
 
-export const channelTypes = ["web", "widget", "api", "slack", "discord"] as const
+export const channelTypes = [
+  "web",
+  "widget",
+  "api",
+  "slack",
+  "discord",
+  "whatsapp",
+  "telegram",
+] as const
 export type ChannelType = (typeof channelTypes)[number]
 
 export const channels = pgTable("channels", {

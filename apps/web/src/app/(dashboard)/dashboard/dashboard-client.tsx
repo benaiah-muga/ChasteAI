@@ -6,7 +6,7 @@ import type { inferRouterOutputs } from "@trpc/server"
 import type { AppRouter } from "@/server/api/root"
 import { api } from "@/trpc/react"
 import { useRouter } from "next/navigation"
-import { Plus, Bot, Key, FileText, BotMessageSquare, Users, MessageSquare } from "lucide-react"
+import { Plus, Bot, Key, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -66,29 +66,25 @@ export function DashboardClient({
       label: "Agents",
       value: stats.agentCount,
       href: "/dashboard/agents",
-      icon: Bot,
-      color: "bg-info-subtle text-info-text ring-1 ring-info-border",
+      color: "bg-info",
     },
     {
       label: "Conversations",
       value: stats.conversationCount,
       href: "/dashboard/agents",
-      icon: MessageSquare,
-      color: "bg-success-subtle text-success-text ring-1 ring-success-border",
+      color: "bg-success",
     },
     {
       label: "Channels",
       value: stats.channelCount,
       href: "/dashboard/agents",
-      icon: Users,
-      color: "bg-warning-subtle text-warning-text ring-1 ring-warning-border",
+      color: "bg-warning",
     },
     {
       label: "Messages",
       value: stats.messageCount,
       href: "/dashboard/agents",
-      icon: BotMessageSquare,
-      color: "bg-accent-subtle text-accent-text ring-1 ring-accent-border",
+      color: "bg-accent",
     },
   ]
 
@@ -108,11 +104,7 @@ export function DashboardClient({
             href={card.href}
             className="border-border bg-surface hover:bg-surface-elevated hover:border-border-hover group rounded-xl border p-5 transition-colors"
           >
-            <div
-              className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg ${card.color}`}
-            >
-              <card.icon className="h-5 w-5" />
-            </div>
+            <div className={`mb-3 h-1 w-10 rounded-full ${card.color}`} />
             <p className="text-text-primary mb-1 text-2xl font-bold">{card.value}</p>
             <p className="text-text-secondary text-xs font-medium uppercase tracking-wider">
               {card.label}
