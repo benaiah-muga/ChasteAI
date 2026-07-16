@@ -1,12 +1,20 @@
-export default function ChannelsPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[#0f172a]">Channels</h1>
-        <p className="mt-1 text-sm text-[#64748b]">
-          Configure and manage your communication channels
-        </p>
-      </div>
-    </div>
+import { appRouter } from "@/server/api/root"
+import { createTRPCContext } from "@/server/api/trpc"
+import { ChannelsClient } from "./channels-client"
+
+export default async function ChannelsPage() {
+  const ctx = await createTRPCContext()
+  const caller = appRouter.createCaller(ctx)
+
+  const agents = await caller.agent.list()
+  const channelResults = await Promise.all(
+    agents.map((a) =>
+      caller.channel
+        .list({ agentId: a.id })
+        .then((chans) => chans.map((c) => ({ ...c, agentName: a.name }))),
+    ),
   )
+  const channels = channelResults.flat()
+
+  return <ChannelsClient channels={channels} agents={agents} />
 }

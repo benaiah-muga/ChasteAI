@@ -70,7 +70,10 @@ export async function POST(
 
   const provider = createProvider({
     type: (agent.providerConfig?.provider as string) ?? "openai",
-    apiKey: (agent.providerConfig?.apiKey as string) ?? process.env.OPENAI_API_KEY ?? process.env.GROQ_API_KEY,
+    apiKey:
+      (agent.providerConfig?.apiKey as string) ??
+      process.env.OPENAI_API_KEY ??
+      process.env.GROQ_API_KEY,
     baseUrl: agent.providerConfig?.baseUrl as string | undefined,
     model,
   })
@@ -79,7 +82,7 @@ export async function POST(
   let ragContext = ""
   if (agentConfig?.ragEnabled === true) {
     try {
-      const ragOpts = { maxChunks: (agentConfig?.ragMaxChunks as number) ?? 3 }
+      const ragOpts = { maxChunks: (agentConfig?.ragMaxChunks as number) ?? 3, agentId: agent.id }
       const chunks = await retrieveRelevantChunks(db, agent.workspaceId, content.trim(), ragOpts)
       ragContext = buildContext(chunks)
     } catch {

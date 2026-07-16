@@ -1,11 +1,18 @@
 # ChasteAI
 
+<p align="center">
+  <img src="apps/web/public/logo.png" alt="ChasteAI" width="120" />
+</p>
+
 **Open-source AI customer support infrastructure.** Self-host everything locally with zero external dependencies.
 
 - **AI agents** that answer customer questions via chat
 - **Multi-channel** (web widget, API, etc.)
 - **Document ingestion** with RAG (retrieval-augmented generation)
+- **Agent knowledge management** — assign documents to specific agents, custom knowledge instructions
 - **Analytics** across conversations, agents, and channels
+- **Security codes** — recovery codes for password reset without email
+- **Test conversations** — preview mode for testing agents without polluting analytics
 - **API keys** for external integrations
 - **Bring your own LLM** — any OpenAI-compatible API works (OpenAI, Groq, Together, LiteLLM, etc.)
 
@@ -13,28 +20,29 @@
 
 ## What you'll see
 
-| URL | What's there |
-|---|---|
-| `http://localhost:3000` | Landing / homepage |
-| `http://localhost:3000/signin` | Sign in form |
-| `http://localhost:3000/signup` | Sign up form |
-| `http://localhost:3000/dashboard` | Dashboard with stats (agents, conversations, channels, messages) |
-| `http://localhost:3000/dashboard/agents` | List your AI agents |
-| `http://localhost:3000/dashboard/agents/new` | Create a new agent |
-| `http://localhost:3000/dashboard/documents` | Uploaded documents |
-| `http://localhost:3000/dashboard/api-keys` | API keys for integrations |
-| `http://localhost:3000/dashboard/analytics` | Conversation analytics |
-| `http://localhost:3000/widget/channel/{id}` | Embedded chat widget |
-| `http://localhost:3000/widget/embed.js` | Widget JavaScript bundle |
-| `http://localhost:3000/api/trpc/health.ping` | Health check (public) |
-| `http://localhost:4983` | Drizzle Studio (database browser) |
+| URL                                                   | What's there                                                     |
+| ----------------------------------------------------- | ---------------------------------------------------------------- |
+| `http://localhost:3000`                               | Landing / homepage                                               |
+| `http://localhost:3000/signin`                        | Sign in form (password or security code)                         |
+| `http://localhost:3000/signup`                        | Sign up form                                                     |
+| `http://localhost:3000/dashboard`                     | Dashboard with stats (agents, conversations, channels, messages) |
+| `http://localhost:3000/dashboard/agents`              | List your AI agents (clickable cards, copy embed, preview)       |
+| `http://localhost:3000/dashboard/agents/new`          | Create a new agent                                               |
+| `http://localhost:3000/dashboard/agents/[id]/preview` | Test agent in mock widget (no real conversations created)        |
+| `http://localhost:3000/dashboard/documents`           | Uploaded documents                                               |
+| `http://localhost:3000/dashboard/api-keys`            | API keys for integrations                                        |
+| `http://localhost:3000/dashboard/analytics`           | Conversation analytics (test conversations excluded)             |
+| `http://localhost:3000/widget/channel/{id}`           | Embedded chat widget                                             |
+| `http://localhost:3000/widget/embed.js`               | Widget JavaScript bundle                                         |
+| `http://localhost:3000/api/trpc/health.ping`          | Health check (public)                                            |
+| `http://localhost:4983`                               | Drizzle Studio (database browser)                                |
 
 ### Seed account
 
-| Field | Value |
-|---|---|
-| Email | `admin@chasteai.dev` |
-| Password | `password123` |
+| Field    | Value                |
+| -------- | -------------------- |
+| Email    | `admin@chasteai.dev` |
+| Password | `password123`        |
 
 ---
 
@@ -74,9 +82,9 @@ GROQ_API_KEY="gsk_..."                            # Groq (free tier)
 
 When creating an agent in the dashboard:
 
-| If you select | You need |
-|---|---|
-| **OpenAI** | `OPENAI_API_KEY` in env, model like `gpt-4o` |
+| If you select         | You need                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------- |
+| **OpenAI**            | `OPENAI_API_KEY` in env, model like `gpt-4o`                                                            |
 | **OpenAI Compatible** | Any `apiKey` + `baseUrl` + `model` — works with Groq, Together, LiteLLM, vLLM, Ollama (via proxy), etc. |
 
 No code changes. No new provider files. Just config.
@@ -244,17 +252,18 @@ The `@e1`, `@e2` references come from the snapshot output — they change based 
 chasteai/
 ├── apps/web/                  # Next.js app (auth, dashboard, API, widget)
 │   ├── src/app/               # Pages, API routes, layouts
-│   ├── src/server/api/        # tRPC routers
-│   └── src/lib/actions/       # Server actions
+│   ├── src/server/api/        # tRPC routers (agent, agentKnowledge, conversation, etc.)
+│   └── src/lib/actions/       # Server actions (auth, setup, admin)
 ├── packages/
 │   ├── ai/                    # AI provider abstraction + registry
 │   │   └── src/providers/     # openai-compatible (single provider, config-driven)
 │   ├── db/                    # Drizzle schema, migrations, seed
-│   ├── rag/                   # RAG: chunking, embeddings, retrieval
-│   ├── analytics/             # Analytics queries
-│   └── ...                    # auth, billing, email, queue, ui (in progress)
+│   ├── rag/                   # RAG: chunking, embeddings, retrieval, crawler
+│   ├── analytics/             # Analytics queries (excludes test conversations)
+│   ├── channels/              # Channel provider abstraction
+│   └── ...                    # typescript-config, eslint-config, prettier-config
 ├── scripts/                   # Setup, ADR management, hooks
-├── docs/                      # ADRs, PRD
+├── docs/                      # ADRs, PRD, design system
 ├── providers.json.example     # Example provider config file
 └── docker-compose.yml         # PostgreSQL, Redis, MinIO, Ollama
 ```
@@ -281,61 +290,68 @@ AUTH_GOOGLE_*       Google OAuth credentials
 
 The provider system is entirely config-driven. There's one provider type — `openai-compatible` — that works with any API that speaks the OpenAI chat completions format.
 
-| API | baseUrl | How to configure |
-|---|---|---|
-| OpenAI | `https://api.openai.com/v1` | Set `OPENAI_API_KEY` env var, select "OpenAI" in form |
-| Groq | `https://api.groq.com/openai/v1` | Set `GROQ_API_KEY` env var, or use "OpenAI Compatible" with custom baseUrl |
-| Together AI | `https://api.together.xyz/v1` | "OpenAI Compatible" with your key |
-| LiteLLM | `http://localhost:4000/v1` | "OpenAI Compatible" with your key |
-| Ollama (via proxy) | `http://localhost:11434/v1` | "OpenAI Compatible" (no key needed for local) |
-| vLLM | `http://localhost:8000/v1` | "OpenAI Compatible" with your key |
-| Any OpenAI-compatible | your URL | "OpenAI Compatible" in the agent form |
+| API                   | baseUrl                          | How to configure                                                           |
+| --------------------- | -------------------------------- | -------------------------------------------------------------------------- |
+| OpenAI                | `https://api.openai.com/v1`      | Set `OPENAI_API_KEY` env var, select "OpenAI" in form                      |
+| Groq                  | `https://api.groq.com/openai/v1` | Set `GROQ_API_KEY` env var, or use "OpenAI Compatible" with custom baseUrl |
+| Together AI           | `https://api.together.xyz/v1`    | "OpenAI Compatible" with your key                                          |
+| LiteLLM               | `http://localhost:4000/v1`       | "OpenAI Compatible" with your key                                          |
+| Ollama (via proxy)    | `http://localhost:11434/v1`      | "OpenAI Compatible" (no key needed for local)                              |
+| vLLM                  | `http://localhost:8000/v1`       | "OpenAI Compatible" with your key                                          |
+| Any OpenAI-compatible | your URL                         | "OpenAI Compatible" in the agent form                                      |
 
 ---
 
 ## API (tRPC)
 
-| Router | Procedures | Auth |
-|---|---|---|
-| `health` | `ping` | Public |
-| `workspace` | `list`, `getBySlug`, `create`, `update`, `delete` | Protected |
-| `agent` | `list`, `getById`, `create`, `update`, `delete` | Protected |
-| `conversation` | `list`, `getById`, `create` | Protected |
-| `channel` | `list`, `getById`, `create`, `update`, `delete` | Protected |
-| `apiKey` | `list`, `getById`, `create`, `update`, `delete` | Protected |
-| `dashboard` | `stats`, `recentConversations` | Protected |
-| `document` | `list`, `getById`, `create`, `delete` | Protected |
-| `analytics` | `overview`, `conversationVolume`, `statusDistribution`, `agentRanking`, `channelDistribution` | Protected |
+| Router           | Procedures                                                                                                  | Auth      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- | --------- |
+| `health`         | `ping`                                                                                                      | Public    |
+| `workspace`      | `list`, `getBySlug`, `create`, `update`, `delete`                                                           | Protected |
+| `agent`          | `list`, `getById`, `create`, `update`, `delete`                                                             | Protected |
+| `agentKnowledge` | `getAssignedDocuments`, `getWorkspaceDocuments`, `assignDocument`, `unassignDocument`, `updateInstructions` | Protected |
+| `conversation`   | `list`, `getById`, `create`                                                                                 | Protected |
+| `channel`        | `list`, `getById`, `create`, `update`, `delete`                                                             | Protected |
+| `apiKey`         | `list`, `getById`, `create`, `update`, `delete`                                                             | Protected |
+| `dashboard`      | `stats`, `recentConversations`                                                                              | Protected |
+| `document`       | `list`, `getById`, `create`, `delete`                                                                       | Protected |
+| `analytics`      | `overview`, `conversationVolume`, `statusDistribution`, `agentRanking`, `channelDistribution`               | Protected |
+| `securityCodes`  | `generate`, `getUnused`, `markUsed`                                                                         | Protected |
 
 ### Public REST routes
 
-| Route | Purpose |
-|---|---|
-| `POST /api/chat/{conversationId}` | Send a chat message (via agent) |
-| `POST /api/documents/ingest` | Upload and ingest a document |
-| `GET /api/public/channels/{channelId}/conversations` | List widget conversations |
-| `POST /api/public/channels/{channelId}/chat/{conversationId}` | Widget chat |
+| Route                                                         | Purpose                                                        |
+| ------------------------------------------------------------- | -------------------------------------------------------------- |
+| `POST /api/chat/{conversationId}`                             | Send a chat message (via agent)                                |
+| `POST /api/documents/ingest`                                  | Upload and ingest a document (optional `agentId` to assign)    |
+| `GET /api/public/channels/{channelId}/conversations`          | List widget conversations                                      |
+| `POST /api/public/channels/{channelId}/conversations`         | Create a conversation (accepts `{ test: true }` for test mode) |
+| `POST /api/public/channels/{channelId}/chat/{conversationId}` | Widget chat                                                    |
 
 ---
 
 ## Troubleshooting
 
 **Port 3000 is in use**
+
 ```sh
 kill $(lsof -ti:3000)
 ```
 
 **Database connection refused**
+
 - Check `pg_isready`, verify `DATABASE_URL` in `.env`
 - `docker compose up -d postgres` if you don't have PostgreSQL natively
 
 **AI provider not responding**
+
 - Verify the API key in `apps/web/.env`
 - For custom providers, check the baseUrl is correct
 - Test with curl: `curl http://localhost:3000/api/trpc/health.ping`
 - Test the provider directly: `curl <baseUrl>/models -H "Authorization: Bearer <key>"`
 
 **"Unknown provider type" error**
+
 - Make sure `provider` field in agent config is one of: `openai`, `openai-compatible`
 
 ---

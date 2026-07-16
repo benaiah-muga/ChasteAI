@@ -6,13 +6,18 @@ Each ADR documents a significant architectural decision, including the context, 
 
 ## Active ADRs
 
-| ID | Title | Status |
-|---|---|---|
-| 001 | Monorepo with Turborepo + pnpm | Proposed |
-| 002 | Drizzle ORM for Database Access | Proposed |
-| 003 | tRPC for API Layer | Proposed |
-| 004 | AI Provider Abstraction Pattern | Proposed |
+| ID  | Title                                               | Status   |
+| --- | --------------------------------------------------- | -------- |
+| 001 | Monorepo with Turborepo + pnpm                      | Proposed |
+| 002 | Drizzle ORM for Database Access                     | Proposed |
+| 003 | tRPC for API Layer                                  | Proposed |
+| 004 | AI Provider Abstraction Pattern                     | Proposed |
 | 005 | Multi-Database Strategy (PostgreSQL + Turso/SQLite) | Proposed |
+| 006 | Credentials + OAuth Authentication Strategy         | Accepted |
+| 007 | Theme Switching (Light / Dark Mode)                 | Proposed |
+| 008 | User Approval Flow                                  | Accepted |
+| 009 | Smart Navigation, UX Enhancements, and Web Crawler  | Proposed |
+| 010 | Single-Workspace Simplification                     | Accepted |
 
 ## Process
 

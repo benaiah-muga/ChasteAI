@@ -85,14 +85,14 @@ export async function getOverview(
       today: sql<number>`count(*) filter (where created_at >= current_date)::int`,
     })
     .from(conversations)
-    .where(inArray(conversations.channelId, channelIds))
+    .where(and(inArray(conversations.channelId, channelIds), eq(conversations.isTest, false)))
 
   const conv = convResult[0]!
 
   const convIds = await db
     .select({ id: conversations.id })
     .from(conversations)
-    .where(inArray(conversations.channelId, channelIds))
+    .where(and(inArray(conversations.channelId, channelIds), eq(conversations.isTest, false)))
 
   const msgResult =
     convIds.length > 0
@@ -102,7 +102,12 @@ export async function getOverview(
             today: sql<number>`count(*) filter (where created_at >= current_date)::int`,
           })
           .from(messages)
-          .where(inArray(messages.conversationId, convIds.map((c) => c.id)))
+          .where(
+            inArray(
+              messages.conversationId,
+              convIds.map((c) => c.id),
+            ),
+          )
       : [{ total: 0, today: 0 }]
 
   const msg = msgResult[0]!
@@ -138,6 +143,7 @@ export async function getConversationVolume(
       and(
         inArray(conversations.channelId, channelIds),
         gte(conversations.createdAt, cutoff),
+        eq(conversations.isTest, false),
       ),
     )
     .groupBy(sql`created_at::date`)
@@ -163,7 +169,7 @@ export async function getStatusDistribution(
       count: sql<number>`count(*)::int`,
     })
     .from(conversations)
-    .where(inArray(conversations.channelId, channelIds))
+    .where(and(inArray(conversations.channelId, channelIds), eq(conversations.isTest, false)))
     .groupBy(conversations.status)
 
   return result.map((r) => ({ status: r.status, count: r.count }))
@@ -205,13 +211,13 @@ export async function getAgentRanking(
       count: sql<number>`count(*)::int`,
     })
     .from(conversations)
-    .where(inArray(conversations.channelId, channelIds))
+    .where(and(inArray(conversations.channelId, channelIds), eq(conversations.isTest, false)))
     .groupBy(conversations.channelId)
 
   const convIds = await db
     .select({ id: conversations.id, channelId: conversations.channelId })
     .from(conversations)
-    .where(inArray(conversations.channelId, channelIds))
+    .where(and(inArray(conversations.channelId, channelIds), eq(conversations.isTest, false)))
 
   let msgCountPerChannel = new Map<string, number>()
   if (convIds.length > 0) {
@@ -271,14 +277,14 @@ export async function getChannelDistribution(
       conversationCount: sql<number>`count(conversations.id)::int`,
     })
     .from(channels)
-    .leftJoin(conversations, eq(conversations.channelId, channels.id))
+    .leftJoin(
+      conversations,
+      and(eq(conversations.channelId, channels.id), eq(conversations.isTest, false)),
+    )
     .where(
       inArray(
         channels.agentId,
-        db
-          .select({ id: agents.id })
-          .from(agents)
-          .where(inArray(agents.workspaceId, workspaceIds)),
+        db.select({ id: agents.id }).from(agents).where(inArray(agents.workspaceId, workspaceIds)),
       ),
     )
     .groupBy(channels.type)

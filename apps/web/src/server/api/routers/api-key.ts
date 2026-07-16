@@ -1,6 +1,6 @@
 import { z } from "zod"
-import { eq, and, inArray } from "drizzle-orm"
-import { apiKeys, apiKeyScopes, memberships } from "@chaste-ai/db"
+import { eq } from "drizzle-orm"
+import { apiKeys, apiKeyScopes } from "@chaste-ai/db"
 import { createInsertSchema } from "drizzle-zod"
 import { TRPCError } from "@trpc/server"
 import { protectedProcedure, router } from "../trpc"
@@ -9,7 +9,6 @@ import { randomBytes, createHash } from "crypto"
 const insertApiKeySchema = createInsertSchema(apiKeys, {
   scopes: z.array(z.enum(apiKeyScopes)),
 }).pick({
-  workspaceId: true,
   name: true,
   scopes: true,
   expiresAt: true,
@@ -24,14 +23,7 @@ function generateApiKey(): { raw: string; hash: string; prefix: string } {
 
 export const apiKeyRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
-    const userWorkspaces = await ctx.db
-      .select({ workspaceId: memberships.workspaceId })
-      .from(memberships)
-      .where(eq(memberships.userId, ctx.session.user.id))
-
-    if (userWorkspaces.length === 0) return []
-
-    const workspaceIds = userWorkspaces.map((w) => w.workspaceId)
+    if (!ctx.workspaceId) return []
 
     return ctx.db
       .select({
@@ -44,7 +36,7 @@ export const apiKeyRouter = router({
         createdAt: apiKeys.createdAt,
       })
       .from(apiKeys)
-      .where(inArray(apiKeys.workspaceId, workspaceIds))
+      .where(eq(apiKeys.workspaceId, ctx.workspaceId))
       .orderBy(apiKeys.createdAt)
   }),
 
@@ -53,22 +45,7 @@ export const apiKeyRouter = router({
     .query(async ({ ctx, input }) => {
       const [key] = await ctx.db.select().from(apiKeys).where(eq(apiKeys.id, input.id)).limit(1)
 
-      if (!key) {
-        throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, key.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
+      if (!key || key.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "NOT_FOUND" })
       }
 
@@ -77,27 +54,14 @@ export const apiKeyRouter = router({
     }),
 
   create: protectedProcedure.input(insertApiKeySchema).mutation(async ({ ctx, input }) => {
-    const [membership] = await ctx.db
-      .select()
-      .from(memberships)
-      .where(
-        and(
-          eq(memberships.workspaceId, input.workspaceId),
-          eq(memberships.userId, ctx.session.user.id),
-        ),
-      )
-      .limit(1)
-
-    if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
-      throw new TRPCError({ code: "FORBIDDEN" })
-    }
+    if (!ctx.workspaceId) throw new TRPCError({ code: "FORBIDDEN" })
 
     const { raw, hash, prefix } = generateApiKey()
 
     const [key] = await ctx.db
       .insert(apiKeys)
       .values({
-        workspaceId: input.workspaceId,
+        workspaceId: ctx.workspaceId,
         name: input.name,
         keyHash: hash,
         keyPrefix: prefix,
@@ -109,7 +73,6 @@ export const apiKeyRouter = router({
     if (!key) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
     }
-
     return { ...key, rawKey: raw }
   }),
 
@@ -131,23 +94,8 @@ export const apiKeyRouter = router({
         .where(eq(apiKeys.id, input.id))
         .limit(1)
 
-      if (!existing) {
+      if (!existing || existing.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, existing.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
-        throw new TRPCError({ code: "FORBIDDEN" })
       }
 
       const updateData: Record<string, unknown> = {}
@@ -184,23 +132,8 @@ export const apiKeyRouter = router({
         .where(eq(apiKeys.id, input.id))
         .limit(1)
 
-      if (!existing) {
+      if (!existing || existing.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, existing.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
-        throw new TRPCError({ code: "FORBIDDEN" })
       }
 
       await ctx.db.delete(apiKeys).where(eq(apiKeys.id, input.id))

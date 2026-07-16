@@ -2,6 +2,8 @@ import { appRouter } from "@/server/api/root"
 import { createTRPCContext } from "@/server/api/trpc"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
+import { ArrowLeft, Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { ChannelsClient } from "./channels-client"
 
 export default async function AgentChannelsPage({
@@ -28,34 +30,29 @@ export default async function AgentChannelsPage({
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-8">
-      <div className="mb-8">
+    <div className="mx-auto max-w-4xl space-y-6 px-8 py-8">
+      <div>
         <Link
           href={`/dashboard/agents/${agentId}`}
-          className="mb-4 inline-flex items-center gap-1 text-xs font-medium text-[#64748b] hover:text-[#0f172a]"
+          className="text-text-tertiary hover:text-text-primary mb-4 inline-flex items-center gap-1.5 text-sm transition-colors"
         >
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-          </svg>
+          <ArrowLeft className="h-3.5 w-3.5" />
           Back to {agent.name}
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-[#0f172a]">
+            <h1 className="text-text-primary font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
               Channels
             </h1>
-            <p className="mt-1 text-sm text-[#64748b]">
+            <p className="text-text-muted mt-1 text-sm">
               Connect {agent.name} to conversation channels.
             </p>
           </div>
-          <Link
-            href={`/dashboard/agents/${agentId}/channels/new`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5]"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            New channel
+          <Link href={`/dashboard/agents/${agentId}/channels/new`}>
+            <Button variant="primary" size="md">
+              <Plus className="mr-1.5 h-4 w-4" />
+              New channel
+            </Button>
           </Link>
         </div>
       </div>

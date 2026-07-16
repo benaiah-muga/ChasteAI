@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Command, ArrowRight } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { auth } from "@/auth"
 import { getDatabaseClient, user } from "@chaste-ai/db"
 import { Button } from "@/components/ui/button"
@@ -34,21 +34,22 @@ export default async function Home() {
 
   return (
     <div className="bg-bg relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:32px_32px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.05)_0%,transparent_70%)]" />
 
       <div className="relative z-10 flex w-full max-w-[440px] flex-col items-center px-6 text-center">
-        <div className="bg-surface-elevated text-accent ring-border mb-6 flex h-12 w-12 items-center justify-center rounded-xl shadow-sm ring-1">
-          <Command className="h-6 w-6" />
+        <div className="bg-accent mb-6 flex h-12 w-12 items-center justify-center rounded-md">
+          <span className="text-text-inverse text-xl font-bold">C</span>
         </div>
 
-        <h1 className="text-text-primary mb-2 text-2xl font-medium tracking-tight">ChasteAI</h1>
-        <p className="text-text-tertiary mb-10 max-w-[320px] text-sm">
+        <h1 className="text-text-primary mb-2 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
+          ChasteAI
+        </h1>
+        <p className="text-text-muted mb-10 max-w-[320px] text-sm">
           Open-source AI customer support infrastructure platform
         </p>
 
         <div className="w-full space-y-6">
-          <Button asChild size="lg" className="w-full font-medium shadow-md">
+          <Button asChild size="lg" className="w-full">
             <Link href="/setup">
               Initialize Workspace
               <ArrowRight className="ml-2 h-4 w-4" />

@@ -1,7 +1,15 @@
 import { sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { id, timestampNow, jsonText } from "./helpers"
 
-export const channelTypes = ["web", "widget", "api", "slack", "discord"] as const
+export const channelTypes = [
+  "web",
+  "widget",
+  "api",
+  "slack",
+  "discord",
+  "whatsapp",
+  "telegram",
+] as const
 export type ChannelType = (typeof channelTypes)[number]
 
 export const channels = sqliteTable("channels", {

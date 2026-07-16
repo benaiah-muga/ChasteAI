@@ -20,15 +20,15 @@ function MessageBubble({ message }: { message: Message }) {
       <div
         className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
           isUser
-            ? "bg-[#6366f1] text-white"
+            ? "bg-accent text-accent-text"
             : isAssistant
-              ? "bg-[#f1f5f9] text-[#0f172a]"
-              : "bg-[#f8fafc] text-[#64748b]"
+              ? "bg-surface-elevated text-text-primary"
+              : "bg-surface text-text-secondary"
         }`}
       >
         <p className="whitespace-pre-wrap">{message.content}</p>
         <p
-          className={`mt-1 text-right text-[10px] ${isUser ? "text-[#c7d2fe]" : "text-[#94a3b8]"}`}
+          className={`mt-1 text-right text-[10px] ${isUser ? "text-accent-text/60" : "text-text-muted"}`}
         >
           {new Date(message.createdAt).toLocaleTimeString([], {
             hour: "2-digit",
@@ -152,11 +152,11 @@ export function ChatView({
 
   return (
     <div className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-4xl flex-col">
-      <div className="flex items-center justify-between border-b border-[#e2e8f0] bg-white px-8 py-3">
+      <div className="border-border bg-surface flex items-center justify-between border-b px-8 py-3">
         <div className="flex items-center gap-3">
           <Link
             href={`/dashboard/agents/${agentId}/conversations`}
-            className="inline-flex items-center gap-1 text-xs font-medium text-[#64748b] hover:text-[#0f172a]"
+            className="text-text-secondary hover:text-text-primary inline-flex items-center gap-1 text-xs font-medium"
           >
             <svg
               className="h-3 w-3"
@@ -173,23 +173,23 @@ export function ChatView({
             </svg>
             Back
           </Link>
-          <span className="text-sm font-medium text-[#0f172a]">{agentName}</span>
+          <span className="text-text-primary text-sm font-medium">{agentName}</span>
         </div>
-        <span className="text-xs text-[#94a3b8]">
+        <span className="text-text-muted text-xs">
           {messages.filter((m) => m.role !== "system").length} messages
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div className="bg-bg flex-1 overflow-y-auto px-8 py-6">
         <div className="space-y-4">
           {messages.map((message) => (
             <MessageBubble key={message.id} message={message} />
           ))}
           {streamingContent && (
             <div className="flex justify-start">
-              <div className="max-w-[75%] rounded-2xl bg-[#f1f5f9] px-4 py-2.5 text-sm leading-relaxed text-[#0f172a]">
+              <div className="bg-surface-elevated text-text-primary max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed">
                 <p className="whitespace-pre-wrap">{streamingContent}</p>
-                <span className="ml-0.5 inline-block h-4 w-2 animate-pulse bg-[#6366f1]" />
+                <span className="bg-accent ml-0.5 inline-block h-4 w-2 animate-pulse" />
               </div>
             </div>
           )}
@@ -197,7 +197,7 @@ export function ChatView({
         </div>
       </div>
 
-      <div className="border-t border-[#e2e8f0] bg-white px-8 py-4">
+      <div className="border-border bg-surface border-t px-8 py-4">
         <form onSubmit={handleSubmit} className="flex items-center gap-3">
           <input
             ref={inputRef}
@@ -206,12 +206,12 @@ export function ChatView({
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type a message..."
             disabled={isStreaming}
-            className="block flex-1 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-4 py-2.5 text-sm text-[#0f172a] outline-none transition-colors placeholder:text-[#94a3b8] focus:border-[#6366f1] focus:bg-white focus:ring-1 focus:ring-[#6366f1] disabled:opacity-50"
+            className="border-border bg-bg text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-accent block flex-1 rounded-lg border px-4 py-2.5 text-sm outline-none focus:ring-1 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!input.trim() || isStreaming}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#6366f1] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5] disabled:opacity-50"
+            className="bg-accent text-accent-text hover:bg-accent-strong inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50"
           >
             {isStreaming ? (
               <span className="flex items-center gap-1.5">

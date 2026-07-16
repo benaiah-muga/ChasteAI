@@ -2,7 +2,7 @@ import { config } from "dotenv"
 import { resolve } from "path"
 import { hash } from "bcryptjs"
 import { getDatabaseClient } from "./client"
-import { user, workspaces, memberships } from "./schemas"
+import { user, workspaces, memberships, agents, channels } from "./schemas"
 
 config({ path: resolve(process.cwd(), "../../apps/web/.env") })
 
@@ -23,6 +23,7 @@ async function seed() {
       email: "admin@chasteai.dev",
       name: "Admin",
       password,
+      status: "active",
     })
     .returning()
 
@@ -49,9 +50,83 @@ async function seed() {
   await db.insert(memberships).values({
     workspaceId: ws.id,
     userId: devUser.id,
-    role: "owner",
+    role: "admin",
   })
 
+  const [supportAgent] = await db
+    .insert(agents)
+    .values({
+      workspaceId: ws.id,
+      name: "Support Bot",
+      description: "General customer support assistant",
+      systemPrompt:
+        "You are a helpful customer support agent. Answer questions politely and accurately.",
+      status: "active",
+      providerConfig: {
+        type: "openai",
+        model: "gpt-4o-mini",
+      },
+    })
+    .returning()
+
+  if (!supportAgent) {
+    throw new Error("Failed to create seed agent")
+  }
+
+  console.log(`Created agent: ${supportAgent.name} (id: ${supportAgent.id})`)
+
+  const [salesAgent] = await db
+    .insert(agents)
+    .values({
+      workspaceId: ws.id,
+      name: "Sales Assistant",
+      description: "Handles sales inquiries and product questions",
+      systemPrompt:
+        "You are a knowledgeable sales representative. Focus on helping customers find the right products.",
+      status: "active",
+      providerConfig: {
+        type: "openai",
+        model: "gpt-4o-mini",
+      },
+    })
+    .returning()
+
+  if (!salesAgent) {
+    throw new Error("Failed to create sales agent")
+  }
+
+  console.log(`Created agent: ${salesAgent.name} (id: ${salesAgent.id})`)
+
+  await db.insert(channels).values({
+    agentId: supportAgent.id,
+    type: "widget",
+    name: "Website Widget",
+    isActive: "true",
+    config: {
+      title: "Chat with Support",
+      greeting: "Hi! How can we help you today?",
+      color: "#6366f1",
+      agentName: "Support Bot",
+    },
+  })
+
+  await db.insert(channels).values({
+    agentId: supportAgent.id,
+    type: "web",
+    name: "Dashboard Chat",
+    isActive: "true",
+    config: {},
+  })
+
+  await db.insert(channels).values({
+    agentId: salesAgent.id,
+    type: "api",
+    name: "Sales API",
+    isActive: "true",
+    config: {},
+  })
+
+  console.log("Created 3 sample channels")
   console.log("Seed complete. Sign in with admin@chasteai.dev / password123")
   process.exit(0)
 }

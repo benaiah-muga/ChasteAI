@@ -1,12 +1,12 @@
-export default function ConversationsPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[#0f172a]">Conversations</h1>
-        <p className="mt-1 text-sm text-[#64748b]">
-          View and manage customer conversations across all channels
-        </p>
-      </div>
-    </div>
-  )
+import { appRouter } from "@/server/api/root"
+import { createTRPCContext } from "@/server/api/trpc"
+import { ConversationsClient } from "./conversations-client"
+
+export default async function ConversationsPage() {
+  const ctx = await createTRPCContext()
+  const caller = appRouter.createCaller(ctx)
+
+  const conversations = await caller.conversation.list()
+
+  return <ConversationsClient conversations={conversations} />
 }

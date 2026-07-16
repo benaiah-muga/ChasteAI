@@ -10,8 +10,10 @@ export default function PendingApprovalPage() {
       </div>
 
       <div>
-        <h1 className="text-text-primary text-lg font-semibold">Account pending approval</h1>
-        <p className="text-text-tertiary mt-2 max-w-sm text-[13px] leading-relaxed">
+        <h1 className="text-text-primary font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
+          Account pending approval
+        </h1>
+        <p className="text-text-muted mt-3 max-w-sm text-sm leading-relaxed">
           Your account has been created and is waiting for an admin to review your request. You will
           receive access once approved.
         </p>

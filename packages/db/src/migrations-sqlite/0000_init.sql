@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS agents (
   name text NOT NULL,
   description text,
   system_prompt text,
+  knowledge_instructions text,
   status text NOT NULL DEFAULT 'draft',
   provider_config text NOT NULL,
   created_at text NOT NULL,
@@ -87,6 +88,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   channel_id text NOT NULL,
   external_user_id text,
   status text NOT NULL DEFAULT 'active',
+  is_test integer NOT NULL DEFAULT 0,
   metadata text DEFAULT '{}',
   message_count integer NOT NULL DEFAULT 0,
   created_at text NOT NULL,
@@ -192,6 +194,24 @@ CREATE TABLE IF NOT EXISTS user_sessions (
   expires_at text NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS security_codes (
+  id text PRIMARY KEY NOT NULL,
+  user_id text NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  code_hash text NOT NULL,
+  code_prefix text NOT NULL,
+  used_at text,
+  created_at text NOT NULL DEFAULT (datetime('now'))
+);
+
 ALTER TABLE workspaces ADD COLUMN description text;
 ALTER TABLE workspaces ADD COLUMN timezone text DEFAULT 'UTC';
 ALTER TABLE workspaces ADD COLUMN deleted_at text;
+
+CREATE TABLE IF NOT EXISTS agent_documents (
+  id text PRIMARY KEY NOT NULL,
+  agent_id text NOT NULL,
+  document_id text NOT NULL,
+  created_at text NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS agent_documents_agent_document_unique ON agent_documents(agent_id, document_id);

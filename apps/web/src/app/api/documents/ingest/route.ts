@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { getDatabaseClient } from "@chaste-ai/db"
 import { eq, and } from "drizzle-orm"
 import { z } from "zod"
-import { documents, documentChunks, memberships } from "@chaste-ai/db"
+import { documents, documentChunks, memberships, agentDocuments } from "@chaste-ai/db"
 import { createProvider, chunkText } from "@chaste-ai/ai"
 import { auth } from "@/auth"
 
@@ -13,6 +13,7 @@ const MAX_CONTENT_SIZE = 1_000_000 // 1 MB
 const ingestBodySchema = z.object({
   documentId: z.string().uuid(),
   content: z.string().min(1).max(MAX_CONTENT_SIZE),
+  agentId: z.string().uuid().optional(),
 })
 
 export async function POST(req: NextRequest, _props: { params: Promise<Record<string, string>> }) {
@@ -41,10 +42,7 @@ export async function POST(req: NextRequest, _props: { params: Promise<Record<st
     .select()
     .from(memberships)
     .where(
-      and(
-        eq(memberships.workspaceId, doc.workspaceId),
-        eq(memberships.userId, session.user.id),
-      ),
+      and(eq(memberships.workspaceId, doc.workspaceId), eq(memberships.userId, session.user.id)),
     )
     .limit(1)
 
@@ -93,6 +91,26 @@ export async function POST(req: NextRequest, _props: { params: Promise<Record<st
         await tx.insert(documentChunks).values(chunkRecords)
       }
       await tx.update(documents).set({ status: "ready" }).where(eq(documents.id, body.documentId))
+
+      if (body.agentId) {
+        const [existing] = await tx
+          .select()
+          .from(agentDocuments)
+          .where(
+            and(
+              eq(agentDocuments.agentId, body.agentId!),
+              eq(agentDocuments.documentId, body.documentId),
+            ),
+          )
+          .limit(1)
+
+        if (!existing) {
+          await tx.insert(agentDocuments).values({
+            agentId: body.agentId!,
+            documentId: body.documentId,
+          })
+        }
+      }
     })
 
     return new Response(JSON.stringify({ success: true, chunkCount: chunkRecords.length }), {

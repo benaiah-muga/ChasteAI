@@ -76,12 +76,13 @@ The `client.ts` provides:
 - `createClientForDialect(url)` -- returns the right client for any dialect (used by setup wizard)
 - `detectDialect(url)` -- detects `postgresql` vs `sqlite` from a connection string
 
-### 15 Tables
+### 16 Tables
 
-workspaces, agents, conversations, messages, documents, document_chunks, channels, api_keys, memberships, subscriptions, analytics_events, user, account, session, verificationToken
+workspaces, agents, conversations, messages, documents, document_chunks, channels, api_keys, memberships, subscriptions, analytics_events, agent_documents, user, account, session, verificationToken
 
 Auth tables (user, account, session, verificationToken) managed by `@auth/drizzle-adapter`.
 Custom `password` column on `user` table for Credentials provider.
+`agent_documents` junction table for agent-scoped document assignment (whitelist model).
 `DATABASE_URL` in `apps/web/.env`.
 
 ### SQLite Migration SQL
@@ -148,6 +149,7 @@ If no user exists (fresh install), shows the setup/launchpad prompt. This replac
 - **Config**: `auth.config.ts` (edge-compatible) + `auth.ts` (full config with providers)
 - **User status**: `user` table has `status` column (`"active" | "pending" | "suspended"`, default `"pending"`). First user created via signup or setup wizard gets `status: "active"`. Subsequent signups get `status: "pending"` and are redirected to `/pending-approval`.
 - **Admin approval**: Pending users cannot sign in (`authorize` callback + `signinAction` both block `pending` and `suspended`). Admins approve via server actions in `apps/web/src/lib/actions/admin.ts`: `approveUserAction` (sets active + creates membership), `denyUserAction` (sets suspended). Team page at `/dashboard/team` shows pending approvals queue with workspace/role selector modal.
+- **Security codes (recovery)**: Users generate a set of single-use security codes after setup (compulsory — prompt cannot be dismissed). Codes serve as a password fallback for account recovery. Sign-in form has a toggle between password and security code modes. After signing in with a security code, user is forced to change their password via `ChangePasswordModal`. Security codes are hashed with bcrypt and stored in `security_codes` table. The `changePasswordAction` in `apps/web/src/lib/actions/auth.ts` accepts security codes as the "current credential" (not just passwords). The `authorize` callback in `auth.ts` bypasses password validation for recovery-code sign-ins (`__recovery__` flag).
 
 ## tRPC
 
@@ -176,6 +178,69 @@ Any OpenAI-compatible API works with `apiKey` + `baseUrl` + `model` in the agent
 For OpenAI-compatible APIs: just configure the agent in the dashboard with "OpenAI Compatible" type, set the `baseUrl`, `apiKey`, and `model`. No code changes needed.
 
 For non-OpenAI-compatible APIs (e.g., Anthropic): create a provider file implementing `AIProvider`, then register it.
+
+## Agent Knowledge Management
+
+Agent-level document assignment controls which documents each agent can access for RAG retrieval.
+
+### Privacy Model (Whitelist)
+
+- **No `agent_documents` entries** for an agent = agent has workspace-wide access to all documents (shared/public).
+- **Entries exist** in `agent_documents` = agent is scoped to only those assigned documents (private).
+- This is a whitelist approach: explicitly assign documents to restrict, or leave empty for full access.
+
+### Schema
+
+`agent_documents` junction table (`packages/db/src/schemas/pg/agent-documents.ts` and `sqlite/`):
+
+- `id` (UUID, PK)
+- `agentId` (UUID, FK to agents)
+- `documentId` (UUID, FK to documents)
+- `createdAt` (timestamp)
+- Unique constraint on `(agentId, documentId)`
+
+### How It Works
+
+1. **Ingest**: `POST /api/documents/ingest` accepts optional `agentId`. If provided, creates an `agent_documents` entry linking the document to the agent.
+2. **Retrieval**: `packages/rag/src/retrieval/index.ts` accepts optional `agentId`. When provided, only chunks from the agent's assigned documents are used for RAG. Falls back to workspace-wide when no `agentId`.
+3. **Chat routes**: Both `apps/web/src/app/api/chat/[conversationId]/route.ts` and the public widget chat route pass `agentId` to the RAG retrieval function.
+4. **UI**: Agent detail page has a "Knowledge" tab (`KnowledgeTab` component in `agent-detail-client.tsx`) for assigning/unassigning documents and editing knowledge instructions.
+5. **Instructions**: `knowledge_instructions` text column on `agents` table stores custom instructions for how the agent uses its knowledge base.
+
+### tRPC Router
+
+`agentKnowledge` router at `apps/web/src/server/api/routers/agent-knowledge.ts`:
+
+- `getAssignedDocuments` — returns documents assigned to a specific agent
+- `getWorkspaceDocuments` — returns all workspace docs (for the assign modal)
+- `assignDocument` — creates an `agent_documents` entry
+- `unassignDocument` — removes an `agent_documents` entry
+- `updateInstructions` — updates `knowledge_instructions` on the agent
+
+## Test Conversations
+
+Test conversations let you preview agent behavior without polluting analytics.
+
+### How It Works
+
+1. **Widget**: Appending `?test=true` to the widget URL puts it in test mode. A "TEST" badge appears in the widget header.
+2. **Conversation creation**: When `?test=true` is present, new conversations are created with `is_test: true` in the database.
+3. **Analytics exclusion**: `packages/analytics/src/service.ts` excludes `is_test=true` conversations from all queries (overview, volume, status distribution, agent ranking, channel distribution).
+4. **Dashboard filtering**: Conversations list (`conversations-list.tsx`) has a filter toggle (All / Real only) and shows a "Test" badge on test conversations.
+5. **Agent preview**: `/dashboard/agents/[agentId]/preview` renders a mock website with the widget in test mode — lets you test an agent without creating real conversations.
+
+### Schema
+
+`is_test` boolean column on `conversations` table (PG + SQLite), default `false`.
+
+## Widget Preview
+
+The agent preview page at `/dashboard/agents/[agentId]/preview` provides a sandboxed testing environment.
+
+- Server component at `preview/page.tsx` fetches the agent and its widget channel
+- Client component at `preview/preview-client.tsx` renders a mock website with the real widget iframe in test mode
+- "Preview" button in the agent detail header navigates to the preview page
+- All conversations created during preview are marked as test conversations
 
 ## Architecture Decision Records
 
@@ -212,6 +277,11 @@ All architectural changes MUST be documented in an ADR (enforced by pre-commit h
 - **Settings page**: `/dashboard/settings` with session timeout toggle, idle timeout (minutes), and max session length (hours) inputs.
 - **Signin/signup pages**: Full-bleed layout (no card wrapper), matching homepage visual style with Command icon branding.
 - **Theme switching**: Not yet implemented. Tracked in ADR-007.
+- **Widget preview**: `/dashboard/agents/[agentId]/preview` renders a mock website with the widget in test mode. "Preview" button in agent detail header.
+- **Test conversations**: Widget `?test=true` creates test conversations. Analytics exclude them. Dashboard shows "Test" badge and filter toggle.
+- **Agent knowledge**: Whitelist model via `agent_documents` junction table. No entries = workspace-wide access, entries exist = private to those agents. KnowledgeTab in agent detail page.
+- **Agent-channel auto-create**: Creating an agent automatically creates a Web Widget channel for it. The setup wizard also creates a channel alongside the agent.
+- **Security codes**: Compulsory post-setup prompt for recovery codes. Sign-in form has password/security-code toggle. Recovery sign-in forces password change.
 
 ## Deferred
 
