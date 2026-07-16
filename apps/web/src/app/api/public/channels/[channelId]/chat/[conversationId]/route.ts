@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { getDatabaseClient } from "@chaste-ai/db"
 import { eq } from "drizzle-orm"
 import { conversations, messages, channels, agents } from "@chaste-ai/db"
-import { createProvider } from "@chaste-ai/ai"
+import { createProvider, checkContentSafety } from "@chaste-ai/ai"
 import { retrieveRelevantChunks, buildContext } from "@chaste-ai/rag"
 
 export const runtime = "nodejs"
@@ -48,23 +48,60 @@ export async function POST(
     return new Response("Agent not found", { status: 404 })
   }
 
+  const agentConfig = agent.providerConfig as Record<string, unknown> | null
+  const contentSafetyConfig = agentConfig?.contentSafety as Record<string, unknown> | null
+
+  if (contentSafetyConfig?.enabled && contentSafetyConfig?.checkInput) {
+    try {
+      const safetyResult = await checkContentSafety(content.trim(), null, {
+        enabled: true,
+        checkInput: true,
+        checkResponse: false,
+        apiKey: (contentSafetyConfig.apiKey as string) ?? (agentConfig?.apiKey as string),
+        baseUrl: contentSafetyConfig.baseUrl as string | undefined,
+        model: contentSafetyConfig.model as string | undefined,
+      })
+
+      if (!safetyResult.inputSafe) {
+        return new Response(
+          JSON.stringify({
+            error: "Message blocked by content safety policy",
+            categories: safetyResult.categories,
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        )
+      }
+    } catch {
+      // Safety check failed — proceed without blocking
+    }
+  }
+
+  const model = (agentConfig?.model as string) ?? "gpt-4o"
+
   const provider = createProvider({
-    type: (agent.providerConfig?.provider as string) ?? "openai",
+    type: (agentConfig?.provider as string) ?? "openai",
     apiKey:
-      (agent.providerConfig?.apiKey as string) ??
-      process.env.OPENAI_API_KEY ??
-      process.env.GROQ_API_KEY,
-    baseUrl: agent.providerConfig?.baseUrl as string | undefined,
-    model: (agent.providerConfig?.model as string) ?? "gpt-4o",
+      (agentConfig?.apiKey as string) ?? process.env.OPENAI_API_KEY ?? process.env.GROQ_API_KEY,
+    baseUrl: agentConfig?.baseUrl as string | undefined,
+    model,
   })
 
-  const model = (agent.providerConfig?.model as string) ?? "gpt-4o"
-
-  const agentConfig = agent.providerConfig as Record<string, unknown> | null
   let ragContext = ""
   if (agentConfig?.ragEnabled === true) {
     try {
-      const ragOpts = { maxChunks: (agentConfig?.ragMaxChunks as number) ?? 3, agentId: agent.id }
+      const embedding = agentConfig?.embedding as Record<string, unknown> | undefined
+      const ragOpts = {
+        maxChunks: (agentConfig?.ragMaxChunks as number) ?? 3,
+        agentId: agent.id,
+        embeddingConfig: embedding
+          ? {
+              model: embedding.model as string | undefined,
+              baseUrl: embedding.baseUrl as string | undefined,
+              apiKey: embedding.apiKey as string | undefined,
+              dimensions: embedding.dimensions as number | undefined,
+            }
+          : undefined,
+      }
       const chunks = await retrieveRelevantChunks(db, agent.workspaceId, content.trim(), ragOpts)
       ragContext = buildContext(chunks)
     } catch {
@@ -112,16 +149,40 @@ export async function POST(
       let fullContent = ""
 
       try {
+        const parameters = agentConfig?.parameters as Record<string, unknown> | undefined
         const response = await provider.chatStream({
           model,
           messages: chatMessages,
           stream: true,
+          temperature: parameters?.temperature as number | undefined,
+          maxTokens: parameters?.maxTokens as number | undefined,
+          topP: parameters?.topP as number | undefined,
         })
 
         for await (const chunk of response) {
           fullContent += chunk.content
           const data = JSON.stringify({ token: chunk.content })
           controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+        }
+
+        if (contentSafetyConfig?.enabled && contentSafetyConfig?.checkResponse) {
+          try {
+            const safetyResult = await checkContentSafety(content.trim(), fullContent, {
+              enabled: true,
+              checkInput: false,
+              checkResponse: true,
+              apiKey: (contentSafetyConfig.apiKey as string) ?? (agentConfig?.apiKey as string),
+              baseUrl: contentSafetyConfig.baseUrl as string | undefined,
+              model: contentSafetyConfig.model as string | undefined,
+            })
+
+            if (!safetyResult.responseSafe) {
+              fullContent =
+                "I apologize, but I cannot provide a response to that query. Please rephrase your question or ask something else."
+            }
+          } catch {
+            // Safety check failed — proceed with original response
+          }
         }
 
         const [assistantMessage] = await db

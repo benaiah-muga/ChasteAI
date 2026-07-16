@@ -48,6 +48,12 @@ export interface RetrievalOptions {
     apiKey?: string
     model?: string
   }
+  embeddingConfig?: {
+    model?: string
+    baseUrl?: string
+    apiKey?: string
+    dimensions?: number
+  }
 }
 
 export async function retrieveRelevantChunks(
@@ -88,16 +94,22 @@ export async function retrieveRelevantChunks(
 
   if (chunks.length === 0) return []
 
+  const embeddingModel = options.embeddingConfig?.model ?? "text-embedding-3-small"
+  const embeddingBaseUrl = options.embeddingConfig?.baseUrl
+  const embeddingApiKey =
+    options.embeddingConfig?.apiKey ?? options.providerConfig?.apiKey ?? process.env.OPENAI_API_KEY
+
   const provider = createProvider({
-    type: "openai",
-    apiKey: options.providerConfig?.apiKey ?? process.env.OPENAI_API_KEY,
-    model: options.providerConfig?.model ?? "gpt-4o",
+    type: "openai-compatible",
+    apiKey: embeddingApiKey,
+    model: embeddingModel,
+    baseUrl: embeddingBaseUrl,
   })
 
   let queryEmbedding: number[] | null = null
   try {
     const embeddings = await provider.embeddings({
-      model: "text-embedding-3-small",
+      model: embeddingModel,
       input: query,
     })
     queryEmbedding = embeddings[0]?.embedding ?? null

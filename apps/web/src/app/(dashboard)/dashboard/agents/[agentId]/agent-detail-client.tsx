@@ -18,6 +18,7 @@ import {
   Lock,
   Upload,
   X,
+  Loader2,
 } from "lucide-react"
 import { api } from "@/trpc/react"
 import { Badge } from "@/components/ui/badge"
@@ -26,6 +27,13 @@ import { Input } from "@/components/ui/input"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 const PROVIDER_PRESETS = [
+  {
+    value: "nvidia",
+    label: "NVIDIA NIM",
+    type: "openai-compatible",
+    baseUrl: "https://integrate.api.nvidia.com/v1",
+    model: "poolside/laguna-xs-2.1",
+  },
   {
     value: "openai",
     label: "OpenAI",
@@ -39,13 +47,6 @@ const PROVIDER_PRESETS = [
     type: "openai-compatible",
     baseUrl: "https://api.groq.com/openai/v1",
     model: "mixtral-8x7b-32768",
-  },
-  {
-    value: "nvidia",
-    label: "NVIDIA",
-    type: "openai-compatible",
-    baseUrl: "https://integrate.api.nvidia.com/v1",
-    model: "nvidia/llama-3.1-nemotron-70b-instruct",
   },
   {
     value: "together",
@@ -559,8 +560,43 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
   const [baseUrl, setBaseUrl] = useState(
     (initial.providerConfig?.baseUrl as string) ?? "https://api.openai.com/v1",
   )
-  const [preset, setPreset] = useState((initial.providerConfig?.preset as string) ?? "openai")
+  const [preset, setPreset] = useState((initial.providerConfig?.preset as string) ?? "nvidia")
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [temperature, setTemperature] = useState(
+    ((initial.providerConfig?.parameters as Record<string, unknown>)?.temperature as number) ?? 0.7,
+  )
+  const [maxTokens, setMaxTokens] = useState(
+    ((initial.providerConfig?.parameters as Record<string, unknown>)?.maxTokens as number) ?? 4096,
+  )
+  const [topP, setTopP] = useState(
+    ((initial.providerConfig?.parameters as Record<string, unknown>)?.topP as number) ?? 0.9,
+  )
+  const [contentSafetyEnabled, setContentSafetyEnabled] = useState(
+    ((initial.providerConfig?.contentSafety as Record<string, unknown>)?.enabled as boolean) ??
+      false,
+  )
+  const [contentSafetyCheckInput, setContentSafetyCheckInput] = useState(
+    ((initial.providerConfig?.contentSafety as Record<string, unknown>)?.checkInput as boolean) ??
+      false,
+  )
+  const [contentSafetyCheckResponse, setContentSafetyCheckResponse] = useState(
+    ((initial.providerConfig?.contentSafety as Record<string, unknown>)
+      ?.checkResponse as boolean) ?? true,
+  )
+  const [contentSafetyModel, setContentSafetyModel] = useState(
+    ((initial.providerConfig?.contentSafety as Record<string, unknown>)?.model as string) ??
+      "nvidia/nemotron-3.5-content-safety",
+  )
+  const [contentSafetyBaseUrl, setContentSafetyBaseUrl] = useState(
+    ((initial.providerConfig?.contentSafety as Record<string, unknown>)?.baseUrl as string) ??
+      "https://integrate.api.nvidia.com/v1",
+  )
+  const [contentSafetyTest, setContentSafetyTest] = useState<
+    "idle" | "testing" | "passed" | "failed"
+  >("idle")
+  const [contentSafetyTestMsg, setContentSafetyTestMsg] = useState("")
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  const [loadingModels, setLoadingModels] = useState(false)
 
   function handlePresetChange(value: string) {
     setPreset(value)
@@ -568,6 +604,63 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
     if (p) {
       setBaseUrl(p.baseUrl)
       setModel(p.model)
+    }
+  }
+
+  async function fetchModels() {
+    if (!apiKey && !baseUrl) return
+    setLoadingModels(true)
+    try {
+      const response = await fetch("/api/models/list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: PROVIDER_PRESETS.find((p) => p.value === preset)?.type ?? "openai-compatible",
+          apiKey,
+          baseUrl: baseUrl || undefined,
+        }),
+      })
+      const data = await response.json()
+      if (data.models) {
+        setAvailableModels(data.models.map((m: { id: string }) => m.id))
+      }
+    } catch {
+      setAvailableModels([])
+    } finally {
+      setLoadingModels(false)
+    }
+  }
+
+  async function testContentSafetyConnection() {
+    const apiKeyToUse = contentSafetyBaseUrl.includes("nvidia") ? apiKey : apiKey
+    if (!apiKeyToUse) {
+      setContentSafetyTest("failed")
+      setContentSafetyTestMsg("Enter an API key in AI Configuration first.")
+      return
+    }
+    setContentSafetyTest("testing")
+    setContentSafetyTestMsg("")
+    try {
+      const res = await fetch("/api/models/test-safety", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: apiKeyToUse,
+          baseUrl: contentSafetyBaseUrl,
+          model: contentSafetyModel,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setContentSafetyTest("passed")
+        setContentSafetyTestMsg("")
+      } else {
+        setContentSafetyTest("failed")
+        setContentSafetyTestMsg(data.error ?? "Connection failed")
+      }
+    } catch (e) {
+      setContentSafetyTest("failed")
+      setContentSafetyTestMsg(e instanceof Error ? e.message : "Connection failed")
     }
   }
 
@@ -605,6 +698,18 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
           model,
           baseUrl,
           ...(apiKey ? { apiKey } : {}),
+          parameters: {
+            temperature,
+            maxTokens,
+            topP,
+          },
+          contentSafety: {
+            enabled: contentSafetyEnabled,
+            checkInput: contentSafetyCheckInput,
+            checkResponse: contentSafetyCheckResponse,
+            model: contentSafetyModel,
+            baseUrl: contentSafetyBaseUrl,
+          },
         },
       },
     })
@@ -767,19 +872,228 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
               </div>
 
               <div>
-                <label
-                  htmlFor="model"
-                  className="text-text-secondary mb-1.5 block text-[13px] font-medium"
-                >
-                  Model
-                </label>
-                <Input
-                  id="model"
-                  type="text"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                />
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label htmlFor="model" className="text-text-secondary text-[13px] font-medium">
+                    Model
+                  </label>
+                  <button
+                    type="button"
+                    onClick={fetchModels}
+                    disabled={loadingModels || (!apiKey && !baseUrl)}
+                    className="text-accent hover:text-accent/80 text-xs font-medium transition-colors disabled:opacity-50"
+                  >
+                    {loadingModels ? "Loading..." : "Fetch available models"}
+                  </button>
+                </div>
+                {availableModels.length > 0 ? (
+                  <select
+                    id="model"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent/20 flex h-9 w-full rounded-lg border px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1"
+                  >
+                    {availableModels.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input
+                    id="model"
+                    type="text"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    placeholder="poolside/laguna-xs-2.1"
+                  />
+                )}
               </div>
+            </div>
+          </div>
+
+          <div className="bg-surface border-border space-y-5 rounded-lg border p-5">
+            <h3 className="text-text-primary text-sm font-medium">Model Parameters</h3>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="text-text-secondary mb-1.5 block text-[13px] font-medium">
+                    Temperature: {temperature}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={temperature}
+                    onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                    className="w-full"
+                  />
+                  <div className="text-text-muted mt-1 flex justify-between text-[11px]">
+                    <span>Precise (0)</span>
+                    <span>Creative (2)</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-text-secondary mb-1.5 block text-[13px] font-medium">
+                    Top P: {topP}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={topP}
+                    onChange={(e) => setTopP(parseFloat(e.target.value))}
+                    className="w-full"
+                  />
+                  <div className="text-text-muted mt-1 flex justify-between text-[11px]">
+                    <span>Focused (0)</span>
+                    <span>Diverse (1)</span>
+                  </div>
+                </div>
+                <div>
+                  <label
+                    htmlFor="max-tokens"
+                    className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                  >
+                    Max Tokens
+                  </label>
+                  <Input
+                    id="max-tokens"
+                    type="number"
+                    min="1"
+                    max="128000"
+                    value={maxTokens}
+                    onChange={(e) => setMaxTokens(parseInt(e.target.value) || 4096)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-surface border-border space-y-5 rounded-lg border p-5">
+            <h3 className="text-text-primary text-sm font-medium">Content Safety</h3>
+            <p className="text-text-tertiary text-[13px]">
+              Moderate user inputs and AI responses for harmful content.
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-text-primary text-[13px] font-medium">
+                    Enable Content Safety
+                  </label>
+                  <p className="text-text-muted text-xs">
+                    Check AI responses for harmful content (recommended for production)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setContentSafetyEnabled(!contentSafetyEnabled)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                    contentSafetyEnabled ? "bg-accent" : "bg-surface-high"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${
+                      contentSafetyEnabled ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {contentSafetyEnabled && (
+                <>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor="safety-model"
+                        className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                      >
+                        Safety Model
+                      </label>
+                      <Input
+                        id="safety-model"
+                        type="text"
+                        value={contentSafetyModel}
+                        onChange={(e) => {
+                          setContentSafetyModel(e.target.value)
+                          setContentSafetyTest("idle")
+                        }}
+                        placeholder="nvidia/nemotron-3.5-content-safety"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="safety-base-url"
+                        className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                      >
+                        Safety Base URL
+                      </label>
+                      <Input
+                        id="safety-base-url"
+                        type="text"
+                        value={contentSafetyBaseUrl}
+                        onChange={(e) => {
+                          setContentSafetyBaseUrl(e.target.value)
+                          setContentSafetyTest("idle")
+                        }}
+                        placeholder="https://integrate.api.nvidia.com/v1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={contentSafetyCheckResponse}
+                        onChange={(e) => setContentSafetyCheckResponse(e.target.checked)}
+                        className="border-border text-accent focus:ring-accent/20 rounded"
+                      />
+                      <span className="text-text-primary text-[13px]">Check AI responses</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={contentSafetyCheckInput}
+                        onChange={(e) => setContentSafetyCheckInput(e.target.checked)}
+                        className="border-border text-accent focus:ring-accent/20 rounded"
+                      />
+                      <span className="text-text-primary text-[13px]">Check user inputs</span>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={testContentSafetyConnection}
+                      disabled={contentSafetyTest === "testing"}
+                    >
+                      {contentSafetyTest === "testing" ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Testing...
+                        </span>
+                      ) : (
+                        "Test Safety Model"
+                      )}
+                    </Button>
+                    {contentSafetyTest === "passed" && (
+                      <span className="text-success inline-flex items-center gap-1.5 text-xs font-medium">
+                        <span className="bg-success inline-block h-1.5 w-1.5 rounded-full" />
+                        Connected
+                      </span>
+                    )}
+                    {contentSafetyTest === "failed" && (
+                      <span className="text-danger text-xs">{contentSafetyTestMsg}</span>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
