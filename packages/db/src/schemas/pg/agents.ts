@@ -9,6 +9,7 @@ export const agents = pgTable("agents", {
   name: text("name").notNull(),
   description: text("description"),
   systemPrompt: text("system_prompt"),
+  knowledgeInstructions: text("knowledge_instructions"),
   status: text("status").notNull().$type<AgentStatus>().default("draft"),
   providerConfig: jsonb("provider_config").notNull().$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),

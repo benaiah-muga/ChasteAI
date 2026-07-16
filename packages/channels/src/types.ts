@@ -34,5 +34,4 @@ export interface ChannelProvider {
   ): Promise<OutboundResult>
   testConnection(config: Record<string, unknown>): Promise<ConnectionTestResult>
   shutdown(channel: ChannelRecord): Promise<void>
-  getQRCode?(channelId: string): Promise<string | null>
 }

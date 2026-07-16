@@ -6,7 +6,7 @@ import {
   channels,
   conversations,
   messages,
-  memberships,
+  agentDocuments,
 } from "@chaste-ai/db"
 import { createInsertSchema } from "drizzle-zod"
 import { TRPCError } from "@trpc/server"
@@ -19,6 +19,7 @@ const insertAgentSchema = createInsertSchema(agents, {
   name: true,
   description: true,
   systemPrompt: true,
+  knowledgeInstructions: true,
   status: true,
   providerConfig: true,
 })
@@ -27,79 +28,72 @@ const updateAgentSchema = insertAgentSchema.partial()
 
 export const agentRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
-    const userWorkspaces = await ctx.db
-      .select({ workspaceId: memberships.workspaceId })
-      .from(memberships)
-      .where(eq(memberships.userId, ctx.session.user.id))
+    if (!ctx.workspaceId) return []
 
-    if (userWorkspaces.length === 0) return []
-
-    const workspaceIds = userWorkspaces.map((w) => w.workspaceId)
-
-    return ctx.db
+    const agentList = await ctx.db
       .select()
       .from(agents)
-      .where(inArray(agents.workspaceId, workspaceIds))
+      .where(eq(agents.workspaceId, ctx.workspaceId))
       .orderBy(agents.createdAt)
+
+    if (agentList.length === 0) return []
+
+    const agentIds = agentList.map((a) => a.id)
+    const agentChannels = await ctx.db
+      .select()
+      .from(channels)
+      .where(inArray(channels.agentId, agentIds))
+
+    const channelsByAgent = new Map<string, typeof agentChannels>()
+    for (const ch of agentChannels) {
+      const list = channelsByAgent.get(ch.agentId) ?? []
+      list.push(ch)
+      channelsByAgent.set(ch.agentId, list)
+    }
+
+    return agentList.map((a) => ({
+      ...a,
+      channels: channelsByAgent.get(a.id) ?? [],
+    }))
   }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const [agent] = await ctx.db.select().from(agents).where(eq(agents.id, input.id)).limit(1)
-
-      if (!agent) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" })
-      }
-
-      const [membership] = await ctx.db
+      const [agent] = await ctx.db
         .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, agent.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
+        .from(agents)
+        .where(and(eq(agents.id, input.id), eq(agents.workspaceId, ctx.workspaceId ?? "")))
         .limit(1)
 
-      if (!membership) {
-        throw new TRPCError({ code: "FORBIDDEN" })
+      if (!agent) {
+        throw new TRPCError({ code: "NOT_FOUND" })
       }
-
       return agent
     }),
 
-  create: protectedProcedure
-    .input(
-      insertAgentSchema.extend({
-        workspaceId: z.string().uuid(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, input.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
+  create: protectedProcedure.input(insertAgentSchema).mutation(async ({ ctx, input }) => {
+    if (!ctx.workspaceId) throw new TRPCError({ code: "FORBIDDEN" })
 
-      if (!membership) {
-        throw new TRPCError({ code: "FORBIDDEN" })
-      }
+    const [agent] = await ctx.db
+      .insert(agents)
+      .values({ ...input, workspaceId: ctx.workspaceId })
+      .returning()
 
-      const [agent] = await ctx.db.insert(agents).values(input).returning()
+    if (!agent) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
+    }
 
-      if (!agent) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
-      }
+    await ctx.db.insert(channels).values({
+      agentId: agent.id,
+      type: "widget",
+      name: "Web Widget",
+      config: {},
+      isActive: "true",
+    })
 
-      return agent
-    }),
+    return agent
+  }),
 
   update: protectedProcedure
     .input(
@@ -115,18 +109,7 @@ export const agentRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" })
       }
 
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, existing.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
+      if (existing.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "FORBIDDEN" })
       }
 
@@ -137,34 +120,22 @@ export const agentRouter = router({
         .returning()
 
       if (!agent) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" })
+        throw new TRPCError({ code: "NOT_FOUND" })
       }
-
       return agent
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const [existing] = await ctx.db.select().from(agents).where(eq(agents.id, input.id)).limit(1)
+      const [existing] = await ctx.db
+        .select()
+        .from(agents)
+        .where(and(eq(agents.id, input.id), eq(agents.workspaceId, ctx.workspaceId ?? "")))
+        .limit(1)
 
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, existing.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
-        throw new TRPCError({ code: "FORBIDDEN" })
       }
 
       await ctx.db.transaction(async (tx) => {
@@ -187,10 +158,10 @@ export const agentRouter = router({
             await tx.delete(messages).where(inArray(messages.conversationId, conversationIds))
             await tx.delete(conversations).where(inArray(conversations.id, conversationIds))
           }
-
           await tx.delete(channels).where(inArray(channels.id, channelIds))
         }
 
+        await tx.delete(agentDocuments).where(eq(agentDocuments.agentId, input.id))
         await tx.delete(agents).where(eq(agents.id, input.id))
       })
 

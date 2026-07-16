@@ -50,7 +50,7 @@ async function seed() {
   await db.insert(memberships).values({
     workspaceId: ws.id,
     userId: devUser.id,
-    role: "owner",
+    role: "admin",
   })
 
   const [supportAgent] = await db

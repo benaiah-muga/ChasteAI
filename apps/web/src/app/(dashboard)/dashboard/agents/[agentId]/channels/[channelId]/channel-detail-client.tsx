@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { api } from "@/trpc/react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 type Agent = {
   id: string
@@ -37,18 +38,9 @@ export function ChannelDetailClient({
   const [isActive, setIsActive] = useState(initial.isActive)
 
   const [botToken, setBotToken] = useState((initial.config?.botToken as string) ?? "")
-  const [appToken, setAppToken] = useState((initial.config?.appToken as string) ?? "")
-  const [signingSecret, setSigningSecret] = useState(
-    (initial.config?.signingSecret as string) ?? "",
-  )
-  const [applicationId, setApplicationId] = useState(
-    (initial.config?.applicationId as string) ?? "",
-  )
-  const [publicKey, setPublicKey] = useState((initial.config?.publicKey as string) ?? "")
-  const [phoneNumber, setPhoneNumber] = useState((initial.config?.phoneNumber as string) ?? "")
   const [testResult, setTestResult] = useState<{ success: boolean; message?: string } | null>(null)
   const [testLoading, setTestLoading] = useState(false)
-  const [qrCode, setQrCode] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const updateChannel = api.channel.update.useMutation({
     onSuccess: () => {
@@ -71,28 +63,11 @@ export function ChannelDetailClient({
     onError: (error) => setTestResult({ success: false, message: error.message }),
   })
 
-  const { data: qrData } = api.channel.getQRCode.useQuery(
-    { id: initial.id },
-    { enabled: initial.type === "whatsapp" },
-  )
-
-  useEffect(() => {
-    if (qrData) setQrCode(qrData)
-  }, [qrData])
-
   function buildConfig(): Record<string, unknown> {
-    switch (initial.type) {
-      case "telegram":
-        return { botToken }
-      case "slack":
-        return { botToken, appToken, signingSecret }
-      case "discord":
-        return { botToken, applicationId, publicKey }
-      case "whatsapp":
-        return { phoneNumber }
-      default:
-        return { ...initial.config }
+    if (initial.type === "telegram") {
+      return { botToken }
     }
+    return { ...initial.config }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -103,10 +78,8 @@ export function ChannelDetailClient({
     })
   }
 
-  async function handleDelete() {
-    if (confirm(`Delete channel "${initial.name}"?`)) {
-      deleteChannel.mutate({ id: initial.id })
-    }
+  async function handleDeleteConfirm() {
+    deleteChannel.mutate({ id: initial.id })
   }
 
   async function handleTestConnection() {
@@ -158,120 +131,8 @@ export function ChannelDetailClient({
             </p>
           </div>
         )
-      case "slack":
-        return (
-          <>
-            <div>
-              <label className="text-text-primary mb-1.5 block text-sm font-medium">
-                Bot Token
-              </label>
-              <input
-                type="password"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-                placeholder="xoxb-..."
-              />
-            </div>
-            <div>
-              <label className="text-text-primary mb-1.5 block text-sm font-medium">
-                App Token
-              </label>
-              <input
-                type="password"
-                value={appToken}
-                onChange={(e) => setAppToken(e.target.value)}
-                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-                placeholder="xapp-..."
-              />
-            </div>
-            <div>
-              <label className="text-text-primary mb-1.5 block text-sm font-medium">
-                Signing Secret
-              </label>
-              <input
-                type="password"
-                value={signingSecret}
-                onChange={(e) => setSigningSecret(e.target.value)}
-                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-                placeholder="abc123def456..."
-              />
-            </div>
-            <p className="text-text-muted text-xs">
-              Create a Slack app with Socket Mode enabled, add the bot token and app-level token
-              from your app's settings.
-            </p>
-          </>
-        )
-      case "discord":
-        return (
-          <>
-            <div>
-              <label className="text-text-primary mb-1.5 block text-sm font-medium">
-                Bot Token
-              </label>
-              <input
-                type="password"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-                placeholder="MTE4NzE5..."
-              />
-            </div>
-            <div>
-              <label className="text-text-primary mb-1.5 block text-sm font-medium">
-                Application ID
-              </label>
-              <input
-                type="text"
-                value={applicationId}
-                onChange={(e) => setApplicationId(e.target.value)}
-                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-                placeholder="118719..."
-              />
-            </div>
-            <div>
-              <label className="text-text-primary mb-1.5 block text-sm font-medium">
-                Public Key
-              </label>
-              <input
-                type="text"
-                value={publicKey}
-                onChange={(e) => setPublicKey(e.target.value)}
-                className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-                placeholder="abc123def456..."
-              />
-            </div>
-          </>
-        )
-      case "whatsapp":
-        return (
-          <div>
-            <label className="text-text-primary mb-1.5 block text-sm font-medium">
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-              placeholder="1234567890 (with country code, no +)"
-            />
-            <p className="text-text-muted mt-1 text-xs">
-              WhatsApp uses QR code pairing via Baileys. Providing a phone number enables pairing
-              code fallback.
-            </p>
-            {qrCode && (
-              <div className="mt-4">
-                <p className="text-text-primary mb-2 text-xs font-medium">
-                  Scan this QR code with WhatsApp:
-                </p>
-                <img src={qrCode} alt="WhatsApp QR Code" className="mx-auto h-48 w-48 rounded-lg" />
-              </div>
-            )}
-          </div>
-        )
       case "widget":
+      case "web":
         return null
       default:
         return null
@@ -284,7 +145,9 @@ export function ChannelDetailClient({
     return (
       <div className="mx-auto max-w-2xl px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-text-primary text-2xl font-semibold tracking-tight">Edit channel</h1>
+          <h1 className="text-text-primary font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
+            Edit channel
+          </h1>
           <p className="text-text-tertiary mt-1 text-sm">Update channel configuration.</p>
         </div>
         <form onSubmit={handleSave} className="space-y-6">
@@ -367,7 +230,7 @@ export function ChannelDetailClient({
         </Link>
       </div>
 
-      <div className="border-border bg-surface rounded-xl border">
+      <div className="bg-surface border-border rounded-lg border">
         <div className="border-border flex items-start justify-between border-b px-6 py-5">
           <div>
             <div className="flex items-center gap-3">
@@ -392,7 +255,7 @@ export function ChannelDetailClient({
             <p className="text-text-secondary mt-1 text-sm">Connected to {agent.name}</p>
           </div>
           <div className="flex items-center gap-2">
-            {initial.type !== "widget" && initial.type !== "web" && initial.type !== "api" && (
+            {initial.type !== "widget" && initial.type !== "web" && (
               <button
                 onClick={() => {
                   handleTestConnection()
@@ -451,7 +314,7 @@ export function ChannelDetailClient({
           </div>
 
           {initial.type === "telegram" && (
-            <div className="border-border bg-surface-elevated mt-4 rounded-lg border p-4">
+            <div className="bg-surface-elevated border-border mt-4 rounded-lg border p-4">
               <h3 className="text-text-primary mb-2 text-sm font-medium">Webhook URL</h3>
               <p className="text-text-muted mb-2 text-xs">
                 Set this as your webhook URL in Telegram Bot API:
@@ -465,7 +328,7 @@ export function ChannelDetailClient({
       </div>
 
       {embedCode && (
-        <div className="border-border bg-surface mt-6 rounded-xl border">
+        <div className="bg-surface border-border mt-6 rounded-lg border">
           <div className="border-border border-b px-6 py-4">
             <h2 className="text-text-primary text-sm font-semibold">Embed snippet</h2>
             <p className="text-text-tertiary mt-0.5 text-xs">
@@ -488,13 +351,23 @@ export function ChannelDetailClient({
 
       <div className="mt-6 flex justify-end">
         <button
-          onClick={handleDelete}
+          onClick={() => setShowDeleteConfirm(true)}
           disabled={deleteChannel.isPending}
           className="text-danger hover:text-danger-text text-xs font-medium"
         >
           {deleteChannel.isPending ? "Deleting..." : "Delete channel"}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={`Delete "${initial.name}"?`}
+        description="This will permanently remove this channel. Any connected conversations will be lost."
+        confirmText={initial.name}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setShowDeleteConfirm(false)}
+        loading={deleteChannel.isPending}
+      />
     </div>
   )
 }

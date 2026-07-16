@@ -285,7 +285,7 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-xl shadow-2xl">
+    <Card className="mx-auto w-full max-w-xl shadow-xl">
       <CardHeader className="border-border border-b p-6 pb-4">
         <div className="mb-4 flex items-center justify-between">
           <span className="text-text-primary text-sm font-semibold">ChasteAI Setup</span>
@@ -305,15 +305,15 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
                     active
                       ? "bg-accent text-accent-text"
                       : done
-                        ? "bg-accent-subtle text-accent-strong"
-                        : "bg-surface-elevated text-text-muted border-border border"
+                        ? "bg-surface-high text-text-secondary"
+                        : "border-border text-text-muted border bg-transparent"
                   }`}
                 >
                   {done ? <Check className="h-3 w-3" /> : idx}
                 </div>
                 {idx < STEPS.length && (
                   <div
-                    className={`h-[2px] flex-1 transition-colors ${done ? "bg-accent-subtle" : "bg-surface-elevated"}`}
+                    className={`h-[2px] flex-1 transition-colors ${done ? "bg-accent-subtle" : "bg-border"}`}
                   />
                 )}
               </div>
@@ -326,10 +326,10 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
         {step === 1 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-text-primary text-lg font-semibold">Create your account</h2>
-              <p className="text-text-tertiary mt-1 text-[13px]">
-                This will be your admin account.
-              </p>
+              <h2 className="text-text-primary font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight">
+                Create your account
+              </h2>
+              <p className="text-text-muted mt-1 text-[13px]">This will be your admin account.</p>
             </div>
             <div className="space-y-3">
               <div>
@@ -372,8 +372,10 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
         {step === 2 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-text-primary text-lg font-semibold">Database</h2>
-              <p className="text-text-tertiary mt-1 text-[13px]">
+              <h2 className="text-text-primary font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight">
+                Database
+              </h2>
+              <p className="text-text-muted mt-1 text-[13px]">
                 {initialDbUrl
                   ? "Database configured via terminal. Test the connection to verify."
                   : "Run pnpm setup:db in your terminal to configure a database."}
@@ -407,8 +409,10 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-text-primary text-lg font-semibold">AI Provider</h2>
-              <p className="text-text-tertiary mt-1 text-[13px]">
+              <h2 className="text-text-primary font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight">
+                AI Provider
+              </h2>
+              <p className="text-text-muted mt-1 text-[13px]">
                 Select a provider and enter your API key. Test the connection before continuing.
               </p>
             </div>
@@ -420,7 +424,7 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
                 <select
                   value={data.providerPreset}
                   onChange={(e) => handlePresetChange(e.target.value)}
-                  className="border-border bg-surface focus-visible:ring-accent focus-visible:border-accent flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2"
+                  className="border-border bg-bg focus-visible:ring-accent focus-visible:border-accent flex h-9 w-full rounded-lg border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2"
                 >
                   {PROVIDER_PRESETS.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -476,8 +480,10 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
         {step === 4 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-text-primary text-lg font-semibold">Workspace & Agent</h2>
-              <p className="text-text-tertiary mt-1 text-[13px]">
+              <h2 className="text-text-primary font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight">
+                Workspace & Agent
+              </h2>
+              <p className="text-text-muted mt-1 text-[13px]">
                 Set up your first workspace and agent.
               </p>
             </div>
@@ -522,7 +528,7 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
                     value={data.systemPrompt}
                     onChange={(e) => update({ systemPrompt: e.target.value })}
                     rows={3}
-                    className="border-border bg-surface focus-visible:ring-accent focus-visible:border-accent flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2"
+                    className="border-border bg-bg focus-visible:ring-accent focus-visible:border-accent flex min-h-[80px] w-full rounded-lg border px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2"
                     placeholder="You are a helpful support agent..."
                   />
                 </div>
@@ -533,12 +539,14 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
 
         {step === 5 && (
           <div className="space-y-4 py-6 text-center">
-            <div className="bg-success-subtle ring-success-border text-success-text inline-flex h-12 w-12 items-center justify-center rounded-full ring-1">
+            <div className="bg-success-subtle ring-success-border text-success-text mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full ring-1">
               <Check className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-text-primary text-lg font-semibold">All set!</h2>
-              <p className="text-text-tertiary mx-auto mt-2 max-w-sm text-[13px]">
+              <h2 className="text-text-primary font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight">
+                All set!
+              </h2>
+              <p className="text-text-muted mx-auto mt-2 max-w-sm text-sm">
                 Your workspace is ready. Click below to go to your dashboard.
               </p>
             </div>
@@ -550,7 +558,7 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
             {errorDetails ? (
               <ExpandableError message={error} details={errorDetails} />
             ) : (
-              <div className="border-danger-border bg-danger-subtle text-danger-text rounded-md border p-3 text-[13px]">
+              <div className="border-danger bg-danger-subtle text-danger-text rounded-lg border p-3 text-[13px]">
                 {error}
               </div>
             )}

@@ -9,14 +9,7 @@ const channelTypes = [
   { value: "widget", label: "Widget", description: "Embeddable chat widget for your website" },
   { value: "web", label: "Web", description: "Chat interface within the dashboard" },
   { value: "api", label: "API", description: "Programmatic access via REST API" },
-  { value: "slack", label: "Slack", description: "Connect to a Slack workspace" },
-  { value: "discord", label: "Discord", description: "Connect to a Discord server" },
   { value: "telegram", label: "Telegram", description: "Connect via Telegram Bot API" },
-  {
-    value: "whatsapp",
-    label: "WhatsApp",
-    description: "Connect via WhatsApp (Baileys QR pairing)",
-  },
 ]
 
 export function ChannelForm({ agentId }: { agentId: string }) {
@@ -41,7 +34,7 @@ export function ChannelForm({ agentId }: { agentId: string }) {
     createChannel.mutate({
       agentId,
       name,
-      type: type as "widget" | "web" | "api" | "slack" | "discord" | "telegram" | "whatsapp",
+      type: type as "widget" | "web" | "api" | "telegram",
       isActive,
       config: {},
     })
@@ -50,13 +43,13 @@ export function ChannelForm({ agentId }: { agentId: string }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {createChannel.error && (
-        <div className="rounded-lg border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-sm text-[#ef4444]">
+        <div className="border-danger-border bg-danger-subtle text-danger-text rounded-lg border px-4 py-3 text-sm">
           {createChannel.error.message}
         </div>
       )}
 
       <div>
-        <label className="mb-3 block text-sm font-medium text-[#0f172a]">Channel type</label>
+        <label className="text-text-primary mb-3 block text-sm font-medium">Channel type</label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {channelTypes.map((ct) => (
             <button
@@ -65,19 +58,19 @@ export function ChannelForm({ agentId }: { agentId: string }) {
               onClick={() => setType(ct.value)}
               className={`rounded-lg border px-4 py-3 text-left transition-colors ${
                 type === ct.value
-                  ? "border-[#6366f1] bg-[#eef2ff] ring-1 ring-[#6366f1]"
-                  : "border-[#e2e8f0] bg-white hover:border-[#c7d2fe]"
+                  ? "border-accent bg-accent-subtle ring-accent ring-1"
+                  : "border-border bg-bg hover:border-accent/40"
               }`}
             >
-              <p className="text-sm font-medium text-[#0f172a]">{ct.label}</p>
-              <p className="mt-0.5 text-xs text-[#64748b]">{ct.description}</p>
+              <p className="text-text-primary text-sm font-medium">{ct.label}</p>
+              <p className="text-text-secondary mt-0.5 text-xs">{ct.description}</p>
             </button>
           ))}
         </div>
       </div>
 
       <div>
-        <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+        <label htmlFor="name" className="text-text-primary mb-1.5 block text-sm font-medium">
           Channel name
         </label>
         <input
@@ -85,21 +78,21 @@ export function ChannelForm({ agentId }: { agentId: string }) {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none transition-colors placeholder:text-[#94a3b8] focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+          className="border-border bg-bg text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
           placeholder="Website widget"
           required
         />
       </div>
 
       <div>
-        <label htmlFor="is-active" className="mb-1.5 block text-sm font-medium text-[#0f172a]">
+        <label htmlFor="is-active" className="text-text-primary mb-1.5 block text-sm font-medium">
           Status
         </label>
         <select
           id="is-active"
           value={isActive}
           onChange={(e) => setIsActive(e.target.value)}
-          className="block w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none transition-colors focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]"
+          className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
         >
           <option value="true">Active</option>
           <option value="false">Inactive</option>
@@ -110,13 +103,13 @@ export function ChannelForm({ agentId }: { agentId: string }) {
         <button
           type="submit"
           disabled={createChannel.isPending || !name}
-          className="inline-flex items-center rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4f46e5] disabled:opacity-50"
+          className="bg-accent text-accent-text hover:bg-accent-strong inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           {createChannel.isPending ? "Creating..." : "Create channel"}
         </button>
         <Link
           href={`/dashboard/agents/${agentId}/channels`}
-          className="text-sm font-medium text-[#64748b] hover:text-[#0f172a]"
+          className="text-text-secondary hover:text-text-primary text-sm font-medium"
         >
           Cancel
         </Link>

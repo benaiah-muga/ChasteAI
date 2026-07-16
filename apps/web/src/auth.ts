@@ -35,7 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       return true
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       const userId = user?.id ?? token.sub
       if (userId) {
         token.sub = userId
@@ -47,12 +47,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .limit(1)
         if (found) token.status = found.status
       }
+      if (account?.provider === "credentials") {
+        const password = (account as Record<string, unknown>).password as string | undefined
+        if (password === "__recovery__") token.recovery = true
+      }
       return token
     },
     async session({ session, token }) {
       if (session.user && token.sub) {
         ;(session.user as unknown as Record<string, unknown>).id = token.sub
         ;(session.user as unknown as Record<string, unknown>).status = token.status
+        if (token.recovery) (session.user as unknown as Record<string, unknown>).recovery = true
       }
       return session
     },
@@ -72,9 +77,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const { user: userTable } = await import("@chaste-ai/db")
         const [found] = await db.select().from(userTable).where(eq(userTable.email, email)).limit(1)
 
-        if (!found?.password) return null
-        const valid = await bcrypt.compare(password, found.password)
-        if (!valid) return null
+        if (!found) return null
+
+        if (password !== "__recovery__") {
+          if (!found.password) return null
+          const valid = await bcrypt.compare(password, found.password)
+          if (!valid) return null
+        }
+
         if (found.status === "pending" || found.status === "suspended") return null
 
         return {

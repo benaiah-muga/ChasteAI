@@ -1,7 +1,7 @@
 import { sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
 import { id, timestampNow } from "./helpers"
 
-export const membershipRoles = ["owner", "admin", "member"] as const
+export const membershipRoles = ["admin", "owner", "member"] as const
 export type MembershipRole = (typeof membershipRoles)[number]
 
 export const memberships = sqliteTable(
@@ -12,7 +12,6 @@ export const memberships = sqliteTable(
     userId: text("user_id").notNull(),
     role: text("role").notNull().$type<MembershipRole>().default("member"),
     createdAt: timestampNow("created_at"),
-    updatedAt: timestampNow("updated_at"),
   },
   (table) => ({
     workspaceUserUnique: uniqueIndex("memberships_workspace_user_unique").on(

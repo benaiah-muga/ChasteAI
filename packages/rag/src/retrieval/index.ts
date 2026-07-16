@@ -1,5 +1,5 @@
 import { eq, inArray } from "drizzle-orm"
-import { documents, documentChunks, type DatabaseClient } from "@chaste-ai/db"
+import { documents, documentChunks, agentDocuments, type DatabaseClient } from "@chaste-ai/db"
 import { createProvider } from "@chaste-ai/ai"
 
 function cosineSimilarity(a: number[], b: number[]): number {
@@ -43,6 +43,7 @@ export interface RetrievedChunk {
 export interface RetrievalOptions {
   maxChunks?: number
   minSimilarity?: number
+  agentId?: string
   providerConfig?: {
     apiKey?: string
     model?: string
@@ -55,21 +56,35 @@ export async function retrieveRelevantChunks(
   query: string,
   options: RetrievalOptions = {},
 ): Promise<RetrievedChunk[]> {
-  const { maxChunks = 3, minSimilarity = 0.0 } = options
+  const { maxChunks = 3, minSimilarity = 0.0, agentId } = options
 
-  const workspaceDocs = await db
-    .select({ id: documents.id })
-    .from(documents)
-    .where(eq(documents.workspaceId, workspaceId))
+  let docFilter: string[] = []
 
-  if (workspaceDocs.length === 0) return []
+  if (agentId) {
+    const agentLinks = await db
+      .select({ documentId: agentDocuments.documentId })
+      .from(agentDocuments)
+      .where(eq(agentDocuments.agentId, agentId))
 
-  const docIds = workspaceDocs.map((d) => d.id)
+    if (agentLinks.length > 0) {
+      docFilter = agentLinks.map((l) => l.documentId)
+    }
+  }
+
+  if (docFilter.length === 0) {
+    const workspaceDocs = await db
+      .select({ id: documents.id })
+      .from(documents)
+      .where(eq(documents.workspaceId, workspaceId))
+    docFilter = workspaceDocs.map((d) => d.id)
+  }
+
+  if (docFilter.length === 0) return []
 
   const chunks = await db
     .select()
     .from(documentChunks)
-    .where(inArray(documentChunks.documentId, docIds))
+    .where(inArray(documentChunks.documentId, docFilter))
 
   if (chunks.length === 0) return []
 
@@ -118,9 +133,7 @@ export async function retrieveRelevantChunks(
 export function buildContext(chunks: RetrievedChunk[]): string {
   if (chunks.length === 0) return ""
 
-  const sections = chunks.map(
-    (chunk, i) => `[${i + 1}] ${chunk.content}`,
-  )
+  const sections = chunks.map((chunk, i) => `[${i + 1}] ${chunk.content}`)
 
   return [
     "Here is relevant information from the knowledge base to help answer the user's question:",

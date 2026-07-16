@@ -10,6 +10,7 @@ export const agents = sqliteTable("agents", {
   name: text("name").notNull(),
   description: text("description"),
   systemPrompt: text("system_prompt"),
+  knowledgeInstructions: text("knowledge_instructions"),
   status: text("status").notNull().$type<AgentStatus>().default("draft"),
   providerConfig: jsonText<Record<string, unknown>>("provider_config").notNull(),
   createdAt: timestampNow("created_at"),

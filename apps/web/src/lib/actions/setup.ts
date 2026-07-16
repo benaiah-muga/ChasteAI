@@ -1,10 +1,19 @@
 "use server"
 
 import { hash } from "bcryptjs"
-import { getDatabaseClient, detectDialect, user, agents, workspaces } from "@chaste-ai/db"
+import {
+  getDatabaseClient,
+  detectDialect,
+  user,
+  agents,
+  channels,
+  workspaces,
+  memberships,
+} from "@chaste-ai/db"
+import { eq } from "drizzle-orm"
 import { createClient } from "@libsql/client"
 import { Pool } from "pg"
-import { signIn } from "@/auth"
+import { signIn, auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { readFileSync, existsSync, writeFileSync } from "fs"
 import { resolve } from "path"
@@ -125,6 +134,9 @@ export async function finalizeSetupAction(data: {
   baseUrl: string
   model: string
 }) {
+  const session = await auth()
+  if (!session?.user?.id) return { error: "Not authenticated" }
+
   const db = getDatabaseClient()
 
   try {
@@ -137,6 +149,12 @@ export async function finalizeSetupAction(data: {
       .returning({ id: workspaces.id })
 
     if (!ws) return { error: "Failed to create workspace" }
+
+    await db.insert(memberships).values({
+      workspaceId: ws.id,
+      userId: session.user.id,
+      role: "admin",
+    })
 
     const providerConfig: Record<string, unknown> = {
       type: data.providerType,
@@ -152,6 +170,22 @@ export async function finalizeSetupAction(data: {
       systemPrompt: data.systemPrompt,
       providerConfig,
     })
+
+    const [agent] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(eq(agents.workspaceId, ws.id))
+      .limit(1)
+
+    if (agent) {
+      await db.insert(channels).values({
+        agentId: agent.id,
+        type: "widget",
+        name: "Web Widget",
+        config: {},
+        isActive: "true",
+      })
+    }
 
     return { success: true }
   } catch (e: any) {

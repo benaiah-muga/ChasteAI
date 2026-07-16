@@ -1,11 +1,8 @@
 import { z } from "zod"
-import { eq, and } from "drizzle-orm"
-import { channels, channelTypes, agents, memberships } from "@chaste-ai/db"
+import { eq } from "drizzle-orm"
+import { channels, channelTypes, agents } from "@chaste-ai/db"
 import {
   telegramConfigSchema,
-  slackConfigSchema,
-  discordConfigSchema,
-  whatsappConfigSchema,
   widgetConfigSchema,
   webConfigSchema,
   apiConfigSchema,
@@ -16,9 +13,6 @@ import { protectedProcedure, router } from "../trpc"
 
 const typeConfigSchemas: Record<string, z.ZodTypeAny> = {
   telegram: telegramConfigSchema,
-  slack: slackConfigSchema,
-  discord: discordConfigSchema,
-  whatsapp: whatsappConfigSchema,
   widget: widgetConfigSchema,
   web: webConfigSchema,
   api: apiConfigSchema,
@@ -62,23 +56,8 @@ export const channelRouter = router({
         .where(eq(agents.id, input.agentId))
         .limit(1)
 
-      if (!agent) {
+      if (!agent || agent.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, agent.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
-        throw new TRPCError({ code: "FORBIDDEN" })
       }
 
       return ctx.db
@@ -102,27 +81,12 @@ export const channelRouter = router({
       }
 
       const [agent] = await ctx.db
-        .select()
+        .select({ workspaceId: agents.workspaceId })
         .from(agents)
         .where(eq(agents.id, channel.agentId))
         .limit(1)
 
-      if (!agent) {
-        throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, agent.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
+      if (!agent || agent.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "FORBIDDEN" })
       }
 
@@ -130,25 +94,14 @@ export const channelRouter = router({
     }),
 
   create: protectedProcedure.input(insertChannelSchema).mutation(async ({ ctx, input }) => {
-    const [agent] = await ctx.db.select().from(agents).where(eq(agents.id, input.agentId)).limit(1)
-
-    if (!agent) {
-      throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" })
-    }
-
-    const [membership] = await ctx.db
-      .select()
-      .from(memberships)
-      .where(
-        and(
-          eq(memberships.workspaceId, agent.workspaceId),
-          eq(memberships.userId, ctx.session.user.id),
-        ),
-      )
+    const [agent] = await ctx.db
+      .select({ workspaceId: agents.workspaceId })
+      .from(agents)
+      .where(eq(agents.id, input.agentId))
       .limit(1)
 
-    if (!membership) {
-      throw new TRPCError({ code: "FORBIDDEN" })
+    if (!agent || agent.workspaceId !== ctx.workspaceId) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" })
     }
 
     const [channel] = await ctx.db
@@ -163,7 +116,6 @@ export const channelRouter = router({
     if (!channel) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
     }
-
     return channel
   }),
 
@@ -186,27 +138,12 @@ export const channelRouter = router({
       }
 
       const [agent] = await ctx.db
-        .select()
+        .select({ workspaceId: agents.workspaceId })
         .from(agents)
         .where(eq(agents.id, existing.agentId))
         .limit(1)
 
-      if (!agent) {
-        throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, agent.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
+      if (!agent || agent.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "FORBIDDEN" })
       }
 
@@ -233,27 +170,12 @@ export const channelRouter = router({
       }
 
       const [agent] = await ctx.db
-        .select()
+        .select({ workspaceId: agents.workspaceId })
         .from(agents)
         .where(eq(agents.id, existing.agentId))
         .limit(1)
 
-      if (!agent) {
-        throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, agent.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
+      if (!agent || agent.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "FORBIDDEN" })
       }
 
@@ -275,27 +197,12 @@ export const channelRouter = router({
       }
 
       const [agent] = await ctx.db
-        .select()
+        .select({ workspaceId: agents.workspaceId })
         .from(agents)
         .where(eq(agents.id, channel.agentId))
         .limit(1)
 
-      if (!agent) {
-        throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, agent.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
+      if (!agent || agent.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "FORBIDDEN" })
       }
 
@@ -322,59 +229,6 @@ export const channelRouter = router({
         return await provider.testConnection(input.config)
       } catch {
         return { success: false as const, message: "Provider not available" }
-      }
-    }),
-
-  getQRCode: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
-    .query(async ({ ctx, input }) => {
-      const [channel] = await ctx.db
-        .select()
-        .from(channels)
-        .where(eq(channels.id, input.id))
-        .limit(1)
-
-      if (!channel) {
-        throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [agent] = await ctx.db
-        .select()
-        .from(agents)
-        .where(eq(agents.id, channel.agentId))
-        .limit(1)
-
-      if (!agent) {
-        throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, agent.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
-        throw new TRPCError({ code: "FORBIDDEN" })
-      }
-
-      if (channel.type !== "whatsapp") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "QR codes are only available for WhatsApp channels",
-        })
-      }
-
-      try {
-        const { getQRCode } = await import("@chaste-ai/channels")
-        return await getQRCode(channel.id)
-      } catch {
-        return null
       }
     }),
 })

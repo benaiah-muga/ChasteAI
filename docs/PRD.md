@@ -205,16 +205,16 @@ Every critical service must expose:
 
 The repository must include:
 
-- README.md
-- CONTRIBUTING.md
-- CODE_OF_CONDUCT.md
-- LICENSE
-- SECURITY.md
-- ROADMAP.md
-- ARCHITECTURE.md
-- API_SPEC.md
-- DEPLOYMENT.md
-- DESIGN_SYSTEM.md
+- [x] README.md
+- [x] CONTRIBUTING.md
+- [ ] CODE_OF_CONDUCT.md
+- [x] LICENSE (MIT)
+- [ ] SECURITY.md
+- [ ] ROADMAP.md
+- [ ] ARCHITECTURE.md
+- [ ] API_SPEC.md
+- [ ] DEPLOYMENT.md
+- [x] DESIGN_SYSTEM.md (docs/DESIGN.md)
 
 ---
 

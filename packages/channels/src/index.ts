@@ -21,10 +21,6 @@ export async function testConnection(
   return provider.testConnection(config)
 }
 
-export async function getQRCode(_channelId: string): Promise<string | null> {
-  return null
-}
-
 export { registerAllProviders } from "./register"
 export { channelRegistry } from "./registry"
 export type {

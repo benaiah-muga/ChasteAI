@@ -3,20 +3,10 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { api } from "@/trpc/react"
-import {
-  Globe,
-  Bot,
-  Cpu,
-  Send,
-  MessageCircle,
-  Hash,
-  Gamepad2,
-  CheckCircle2,
-  Settings2,
-  X,
-} from "lucide-react"
+import { Globe, Bot, Cpu, Send, CheckCircle2, Settings2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 
 type Channel = {
   id: string
@@ -43,20 +33,7 @@ const supportedTypes = [
   },
   { value: "web", label: "Web", description: "Chat interface within the dashboard", icon: Globe },
   { value: "api", label: "API", description: "Programmatic access via REST API", icon: Cpu },
-  { value: "slack", label: "Slack", description: "Connect to a Slack workspace", icon: Hash },
-  {
-    value: "discord",
-    label: "Discord",
-    description: "Connect to a Discord server",
-    icon: Gamepad2,
-  },
   { value: "telegram", label: "Telegram", description: "Connect via Telegram Bot API", icon: Send },
-  {
-    value: "whatsapp",
-    label: "WhatsApp",
-    description: "Connect via WhatsApp (Baileys QR pairing)",
-    icon: MessageCircle,
-  },
 ]
 
 type Props = {
@@ -82,29 +59,6 @@ const configFields: Record<
       label: "Bot Token",
       type: "password",
       placeholder: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
-    },
-  ],
-  slack: [
-    { key: "botToken", label: "Bot Token", type: "password", placeholder: "xoxb-..." },
-    { key: "appToken", label: "App Token", type: "password", placeholder: "xapp-..." },
-    {
-      key: "signingSecret",
-      label: "Signing Secret",
-      type: "password",
-      placeholder: "abc123def456...",
-    },
-  ],
-  discord: [
-    { key: "botToken", label: "Bot Token", type: "password", placeholder: "MTE4NzE5..." },
-    { key: "applicationId", label: "Application ID", type: "text", placeholder: "118719..." },
-    { key: "publicKey", label: "Public Key", type: "text", placeholder: "abc123def456..." },
-  ],
-  whatsapp: [
-    {
-      key: "phoneNumber",
-      label: "Phone Number",
-      type: "tel",
-      placeholder: "1234567890 (with country code, no +)",
     },
   ],
 }
@@ -143,7 +97,7 @@ export function ChannelsClient({ channels, agents }: Props) {
     createChannel.mutate({
       agentId: selectedAgent,
       name,
-      type: configuring as "widget" | "web" | "api" | "slack" | "discord" | "telegram" | "whatsapp",
+      type: configuring as "widget" | "web" | "api" | "telegram",
       isActive: "true",
       config: config as Record<string, unknown>,
     })
@@ -166,16 +120,18 @@ export function ChannelsClient({ channels, agents }: Props) {
     }
 
     testConnection.mutate({
-      type: configuring as "web" | "widget" | "api" | "slack" | "discord" | "telegram" | "whatsapp",
+      type: configuring as "web" | "widget" | "api" | "telegram",
       config: config as Record<string, unknown>,
     })
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-8">
       <div>
-        <h1 className="text-text-primary text-lg font-semibold tracking-tight">Channels</h1>
-        <p className="text-text-tertiary mt-0.5 text-xs">
+        <h1 className="text-text-primary font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
+          Channels
+        </h1>
+        <p className="text-text-muted mt-1 text-sm">
           Browse and configure communication channels for your agents
         </p>
       </div>
@@ -189,8 +145,8 @@ export function ChannelsClient({ channels, agents }: Props) {
           return (
             <div
               key={type.value}
-              className={`border-border bg-surface rounded-xl border transition-all ${
-                isConfiguring ? "ring-accent ring-2" : "hover:border-border-hover"
+              className={`bg-surface border-border rounded-lg border transition-all ${
+                isConfiguring ? "ring-accent ring-2" : ""
               }`}
             >
               <div className="p-5">
@@ -198,18 +154,12 @@ export function ChannelsClient({ channels, agents }: Props) {
                   <div className="bg-accent-subtle text-accent flex h-10 w-10 items-center justify-center rounded-lg">
                     <Icon className="h-5 w-5" />
                   </div>
-                  {status.label === "Not configured" ? (
-                    <Badge variant="muted">{status.label}</Badge>
-                  ) : (
-                    <Badge variant={status.variant}>{status.label}</Badge>
-                  )}
+                  <Badge variant={status.variant}>{status.label}</Badge>
                 </div>
-                <h3 className="text-text-primary mt-4 text-sm font-semibold">{type.label}</h3>
-                <p className="text-text-tertiary mt-1 text-xs leading-relaxed">
-                  {type.description}
-                </p>
+                <h3 className="text-text-primary mt-4 text-sm font-medium">{type.label}</h3>
+                <p className="text-text-muted mt-1 text-xs leading-relaxed">{type.description}</p>
 
-                <div className="mt-4 flex items-center gap-2">
+                <div className="mt-4">
                   {isConfiguring ? (
                     <Button variant="secondary" size="sm" onClick={() => setConfiguring(null)}>
                       <X className="mr-1 h-3.5 w-3.5" />
@@ -228,7 +178,7 @@ export function ChannelsClient({ channels, agents }: Props) {
                 <div className="border-border border-t">
                   <form onSubmit={handleSave} className="space-y-4 p-5">
                     <div>
-                      <label className="text-text-primary mb-1 block text-xs font-medium">
+                      <label className="text-text-primary mb-1.5 block text-sm font-medium">
                         Agent
                       </label>
                       <select
@@ -247,30 +197,28 @@ export function ChannelsClient({ channels, agents }: Props) {
                     </div>
 
                     <div>
-                      <label className="text-text-primary mb-1 block text-xs font-medium">
+                      <label className="text-text-primary mb-1.5 block text-sm font-medium">
                         Channel name
                       </label>
-                      <input
+                      <Input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
                         required
                       />
                     </div>
 
                     {(configFields[type.value] ?? []).map((field) => (
                       <div key={field.key}>
-                        <label className="text-text-primary mb-1 block text-xs font-medium">
+                        <label className="text-text-primary mb-1.5 block text-sm font-medium">
                           {field.label}
                         </label>
-                        <input
+                        <Input
                           type={field.type}
                           value={config[field.key] ?? ""}
                           onChange={(e) =>
                             setConfig((prev) => ({ ...prev, [field.key]: e.target.value }))
                           }
-                          className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
                           placeholder={field.placeholder}
                         />
                       </div>
@@ -318,9 +266,9 @@ export function ChannelsClient({ channels, agents }: Props) {
       </div>
 
       {channels.length > 0 && (
-        <div className="border-border bg-surface rounded-xl border">
+        <div className="bg-surface border-border rounded-lg border">
           <div className="border-border border-b px-5 py-3">
-            <h2 className="text-text-primary text-sm font-semibold">All configured channels</h2>
+            <h2 className="text-text-primary text-sm font-medium">All configured channels</h2>
           </div>
           <div className="divide-border divide-y">
             {channels.map((channel) => {

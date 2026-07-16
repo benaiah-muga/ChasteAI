@@ -6,17 +6,10 @@ export default async function DashboardPage() {
   const ctx = await createTRPCContext()
   const caller = appRouter.createCaller(ctx)
 
-  const [workspaces, stats, recentConversations] = await Promise.all([
-    caller.workspace.list(),
+  const [stats, recentConversations] = await Promise.all([
     caller.dashboard.stats(),
     caller.dashboard.recentConversations(),
   ])
 
-  return (
-    <DashboardClient
-      workspaces={workspaces}
-      stats={stats}
-      recentConversations={recentConversations}
-    />
-  )
+  return <DashboardClient stats={stats} recentConversations={recentConversations} />
 }

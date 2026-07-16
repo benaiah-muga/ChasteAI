@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@chaste-ai/db", "@chaste-ai/ai", "@chaste-ai/ui", "@chaste-ai/channels"],
-  serverExternalPackages: ["@whiskeysockets/baileys"],
+  transpilePackages: ["@chaste-ai/db", "@chaste-ai/ai", "@chaste-ai/channels"],
 }
 
 export default nextConfig

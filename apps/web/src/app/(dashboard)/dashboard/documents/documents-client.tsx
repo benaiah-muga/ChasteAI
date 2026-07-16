@@ -7,14 +7,6 @@ import { api } from "@/trpc/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card"
 
 type Document = {
   id: string
@@ -56,11 +48,9 @@ function SourceIcon({ type }: { type: string }) {
 function UploadForm({ onDone }: { onDone: () => void }) {
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
-  const [workspaceId, setWorkspaceId] = useState("")
   const [isIngesting, setIsIngesting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { data: workspaces } = api.workspace.list.useQuery()
   const createDoc = api.document.create.useMutation({
     onSuccess: async (doc) => {
       setIsIngesting(true)
@@ -86,41 +76,15 @@ function UploadForm({ onDone }: { onDone: () => void }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!title || !content || !workspaceId) return
-    createDoc.mutate({ workspaceId, title, sourceType: "markdown", metadata: {} })
+    if (!title || !content) return
+    createDoc.mutate({ title, sourceType: "markdown", metadata: {} })
   }
-
-  const wsList = workspaces?.map(({ workspaces: ws }) => ws) ?? []
 
   return (
     <form onSubmit={handleSubmit}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Manual Upload</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label
-              htmlFor="doc-workspace"
-              className="text-text-primary mb-1.5 block text-sm font-medium"
-            >
-              Workspace
-            </label>
-            <select
-              id="doc-workspace"
-              value={workspaceId}
-              onChange={(e) => setWorkspaceId(e.target.value)}
-              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-              required
-            >
-              <option value="">Select workspace</option>
-              {wsList.map((ws) => (
-                <option key={ws.id} value={ws.id}>
-                  {ws.name}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="bg-surface border-border rounded-lg border p-6">
+        <h2 className="text-text-primary text-sm font-medium">Manual Upload</h2>
+        <div className="mt-4 space-y-4">
           <div>
             <label
               htmlFor="doc-title"
@@ -153,22 +117,17 @@ function UploadForm({ onDone }: { onDone: () => void }) {
               required
             />
           </div>
-          {error && <p className="text-danger text-sm">{error}</p>}
-          {createDoc.error && <p className="text-danger text-sm">{createDoc.error.message}</p>}
-        </CardContent>
-        <CardFooter>
-          <Button
-            type="submit"
-            disabled={createDoc.isPending || isIngesting || !title || !content || !workspaceId}
-          >
-            {createDoc.isPending
-              ? "Creating..."
-              : isIngesting
-                ? "Processing..."
-                : "Upload & process"}
-          </Button>
-        </CardFooter>
-      </Card>
+          {error && <p className="text-danger-text text-sm">{error}</p>}
+          {createDoc.error && <p className="text-danger-text text-sm">{createDoc.error.message}</p>}
+        </div>
+        <Button
+          className="mt-4"
+          type="submit"
+          disabled={createDoc.isPending || isIngesting || !title || !content}
+        >
+          {createDoc.isPending ? "Creating..." : isIngesting ? "Processing..." : "Upload & process"}
+        </Button>
+      </div>
     </form>
   )
 }
@@ -177,23 +136,18 @@ function WebsiteCrawlForm({ onDone }: { onDone: () => void }) {
   const [url, setUrl] = useState("")
   const [maxPages, setMaxPages] = useState(50)
   const [maxDepth, setMaxDepth] = useState(2)
-  const [workspaceId, setWorkspaceId] = useState("")
   const [isCrawling, setIsCrawling] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { data: workspaces } = api.workspace.list.useQuery()
   const createDoc = api.document.create.useMutation()
-
-  const wsList = workspaces?.map(({ workspaces: ws }) => ws) ?? []
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!url || !workspaceId) return
+    if (!url) return
     setIsCrawling(true)
     setError(null)
     try {
       const doc = await createDoc.mutateAsync({
-        workspaceId,
         title: url,
         sourceType: "website",
         sourceUrl: url,
@@ -218,33 +172,9 @@ function WebsiteCrawlForm({ onDone }: { onDone: () => void }) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Crawl Website</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label
-              htmlFor="crawl-workspace"
-              className="text-text-primary mb-1.5 block text-sm font-medium"
-            >
-              Workspace
-            </label>
-            <select
-              id="crawl-workspace"
-              value={workspaceId}
-              onChange={(e) => setWorkspaceId(e.target.value)}
-              className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-              required
-            >
-              <option value="">Select workspace</option>
-              {wsList.map((ws) => (
-                <option key={ws.id} value={ws.id}>
-                  {ws.name}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="bg-surface border-border rounded-lg border p-6">
+        <h2 className="text-text-primary text-sm font-medium">Crawl Website</h2>
+        <div className="mt-4 space-y-4">
           <div>
             <label
               htmlFor="crawl-url"
@@ -265,7 +195,7 @@ function WebsiteCrawlForm({ onDone }: { onDone: () => void }) {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label
                 htmlFor="max-pages"
@@ -299,24 +229,22 @@ function WebsiteCrawlForm({ onDone }: { onDone: () => void }) {
               />
             </div>
           </div>
-          {error && <p className="text-danger text-sm">{error}</p>}
-        </CardContent>
-        <CardFooter>
-          <Button type="submit" disabled={isCrawling || !url || !workspaceId}>
-            {isCrawling ? (
-              <>
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                Crawling...
-              </>
-            ) : (
-              <>
-                <Globe className="mr-1.5 h-4 w-4" />
-                Start crawl
-              </>
-            )}
-          </Button>
-        </CardFooter>
-      </Card>
+          {error && <p className="text-danger-text text-sm">{error}</p>}
+        </div>
+        <Button className="mt-4" type="submit" disabled={isCrawling || !url}>
+          {isCrawling ? (
+            <>
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              Crawling...
+            </>
+          ) : (
+            <>
+              <Globe className="mr-1.5 h-4 w-4" />
+              Start crawl
+            </>
+          )}
+        </Button>
+      </div>
     </form>
   )
 }
@@ -352,11 +280,13 @@ export function DocumentsClient({ documents: initial }: { documents: Document[] 
   })
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-text-primary text-lg font-semibold tracking-tight">Documents</h1>
-          <p className="text-text-tertiary mt-0.5 text-xs">
+          <h1 className="text-text-primary font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
+            Documents
+          </h1>
+          <p className="text-text-muted mt-1 text-sm">
             Upload and manage knowledge base documents for your agents.
           </p>
         </div>
@@ -373,12 +303,12 @@ export function DocumentsClient({ documents: initial }: { documents: Document[] 
 
       {showUpload && (
         <div className="space-y-4">
-          <div className="border-border flex rounded-lg border p-1">
+          <div className="bg-surface border-border flex rounded-lg border p-1">
             <button
               onClick={() => setUploadMode("manual")}
               className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 uploadMode === "manual"
-                  ? "bg-surface-active text-text-primary"
+                  ? "bg-surface-elevated text-text-primary"
                   : "text-text-tertiary hover:text-text-secondary"
               }`}
             >
@@ -389,7 +319,7 @@ export function DocumentsClient({ documents: initial }: { documents: Document[] 
               onClick={() => setUploadMode("website")}
               className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 uploadMode === "website"
-                  ? "bg-surface-active text-text-primary"
+                  ? "bg-surface-elevated text-text-primary"
                   : "text-text-tertiary hover:text-text-secondary"
               }`}
             >
@@ -416,11 +346,11 @@ export function DocumentsClient({ documents: initial }: { documents: Document[] 
       )}
 
       <div className="relative">
-        <input
+        <Input
           placeholder="Search documents..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border-border bg-bg text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-accent w-full rounded-lg border px-3 py-2 pl-9 text-sm outline-none focus:ring-1"
+          className="pl-9"
         />
         <svg
           className="text-text-muted absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2"
@@ -438,33 +368,30 @@ export function DocumentsClient({ documents: initial }: { documents: Document[] 
       </div>
 
       {initial.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center py-16 text-center">
-            <div className="bg-accent-subtle text-accent mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-              <FileText className="h-6 w-6" />
-            </div>
-            <CardTitle className="mb-1">No documents yet</CardTitle>
-            <CardDescription className="mb-6">
-              Upload documents or crawl a website to build a knowledge base.
-            </CardDescription>
-            <Button
-              onClick={() => {
-                setShowUpload(true)
-                setUploadMode("manual")
-              }}
-            >
-              Upload your first document
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="bg-surface border-border rounded-lg border py-16 text-center">
+          <div className="bg-accent-subtle text-accent mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+            <FileText className="h-6 w-6" />
+          </div>
+          <h3 className="text-text-primary text-sm font-medium">No documents yet</h3>
+          <p className="text-text-muted mt-1 text-sm">
+            Upload documents or crawl a website to build a knowledge base.
+          </p>
+          <Button
+            className="mt-6"
+            onClick={() => {
+              setShowUpload(true)
+              setUploadMode("manual")
+            }}
+          >
+            Upload your first document
+          </Button>
+        </div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center py-12 text-center">
-            <FileText className="text-text-muted mb-3 h-8 w-8" />
-            <p className="text-text-primary text-sm font-medium">No results found</p>
-            <p className="text-text-tertiary mt-1 text-xs">Try a different search term.</p>
-          </CardContent>
-        </Card>
+        <div className="bg-surface border-border rounded-lg border py-12 text-center">
+          <FileText className="text-text-muted mx-auto mb-3 h-8 w-8" />
+          <p className="text-text-primary text-sm font-medium">No results found</p>
+          <p className="text-text-muted mt-1 text-xs">Try a different search term.</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {filtered.map((doc) => {
@@ -475,7 +402,7 @@ export function DocumentsClient({ documents: initial }: { documents: Document[] 
             return (
               <div
                 key={doc.id}
-                className="border-border bg-surface hover:bg-surface-hover group flex items-center gap-4 rounded-xl border p-4 transition-colors"
+                className="bg-surface border-border hover:bg-surface-hover group flex items-center gap-4 rounded-lg border p-4 transition-colors"
               >
                 <div className="bg-accent-subtle text-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
                   <SourceIcon type={doc.sourceType} />

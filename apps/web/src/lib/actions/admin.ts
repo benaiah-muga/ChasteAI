@@ -1,47 +1,47 @@
 "use server"
 
-import { eq, and, inArray } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { getDatabaseClient, user, memberships } from "@chaste-ai/db"
 import { auth } from "@/auth"
 import { z } from "zod"
 
 const approveSchema = z.object({
   userId: z.string().min(1),
-  workspaceId: z.string().min(1),
-  role: z.enum(["admin", "member"]),
 })
 
 export async function approveUserAction(data: z.infer<typeof approveSchema>) {
   const parsed = approveSchema.safeParse(data)
   if (!parsed.success) return { error: "Invalid request" }
 
-  const { userId, workspaceId, role } = parsed.data
+  const { userId } = parsed.data
   const session = await auth()
   if (!session?.user?.id) return { error: "Not authenticated" }
 
   const db = getDatabaseClient()
 
-  const [membership] = await db
-    .select({ role: memberships.role })
+  const [adminMembership] = await db
+    .select({ workspaceId: memberships.workspaceId, role: memberships.role })
     .from(memberships)
-    .where(and(eq(memberships.userId, session.user.id), eq(memberships.workspaceId, workspaceId)))
+    .where(eq(memberships.userId, session.user.id))
     .limit(1)
 
-  if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+  if (!adminMembership || (adminMembership.role !== "admin" && adminMembership.role !== "owner")) {
     return { error: "You do not have permission to approve users" }
   }
+
+  const workspaceId = adminMembership.workspaceId
 
   const [existing] = await db
     .select({ id: memberships.id })
     .from(memberships)
-    .where(and(eq(memberships.userId, userId), eq(memberships.workspaceId, workspaceId)))
+    .where(eq(memberships.userId, userId))
     .limit(1)
 
-  if (existing) return { error: "User is already a member of this workspace" }
+  if (existing) return { error: "User is already a member" }
 
   await db.transaction(async (tx) => {
     await tx.update(user).set({ status: "active" }).where(eq(user.id, userId))
-    await tx.insert(memberships).values({ workspaceId, userId, role })
+    await tx.insert(memberships).values({ workspaceId, userId, role: "member" })
   })
 
   return { success: true }
@@ -53,23 +53,13 @@ export async function denyUserAction(userId: string) {
 
   const db = getDatabaseClient()
 
-  const targetWorkspaces = await db
-    .select({ workspaceId: memberships.workspaceId })
-    .from(memberships)
-    .where(eq(memberships.userId, userId))
-
-  const targetIds = targetWorkspaces.map((m) => m.workspaceId)
-  if (targetIds.length === 0) return { error: "User is not a member of any workspace" }
-
   const [adminMembership] = await db
     .select({ role: memberships.role })
     .from(memberships)
-    .where(
-      and(eq(memberships.userId, session.user.id), inArray(memberships.workspaceId, targetIds)),
-    )
+    .where(eq(memberships.userId, session.user.id))
     .limit(1)
 
-  if (!adminMembership || (adminMembership.role !== "owner" && adminMembership.role !== "admin")) {
+  if (!adminMembership || (adminMembership.role !== "admin" && adminMembership.role !== "owner")) {
     return { error: "You do not have permission to deny users" }
   }
 
@@ -90,7 +80,7 @@ export async function getPendingUsersAction() {
     .where(eq(memberships.userId, session.user.id))
     .limit(1)
 
-  if (!adminMembership || (adminMembership.role !== "owner" && adminMembership.role !== "admin")) {
+  if (!adminMembership || (adminMembership.role !== "admin" && adminMembership.role !== "owner")) {
     return { error: "Not authorized" }
   }
 
@@ -107,23 +97,4 @@ export async function getPendingUsersAction() {
     .orderBy(user.createdAt)
 
   return { users: pending }
-}
-
-export async function getAdminWorkspacesAction() {
-  const session = await auth()
-  if (!session?.user?.id) return { error: "Not authenticated" }
-
-  const db = getDatabaseClient()
-  const { workspaces: workspacesTable } = await import("@chaste-ai/db")
-
-  const result = await db
-    .select({
-      id: workspacesTable.id,
-      name: workspacesTable.name,
-    })
-    .from(memberships)
-    .innerJoin(workspacesTable, eq(workspacesTable.id, memberships.workspaceId))
-    .where(and(eq(memberships.userId, session.user.id), eq(memberships.role, "owner")))
-
-  return { workspaces: result }
 }

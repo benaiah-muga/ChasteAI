@@ -1,12 +1,6 @@
 import { z } from "zod"
-import { eq, and, inArray } from "drizzle-orm"
-import {
-  documents,
-  documentSources,
-  documentStatuses,
-  documentChunks,
-  memberships,
-} from "@chaste-ai/db"
+import { eq } from "drizzle-orm"
+import { documents, documentSources, documentStatuses, documentChunks } from "@chaste-ai/db"
 import { createInsertSchema } from "drizzle-zod"
 import { TRPCError } from "@trpc/server"
 import { protectedProcedure, router } from "../trpc"
@@ -15,7 +9,6 @@ const insertDocumentSchema = createInsertSchema(documents, {
   sourceType: z.enum(documentSources),
   status: z.enum(documentStatuses).optional(),
 }).pick({
-  workspaceId: true,
   sourceType: true,
   sourceUrl: true,
   title: true,
@@ -24,19 +17,11 @@ const insertDocumentSchema = createInsertSchema(documents, {
 
 export const documentRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
-    const userWorkspaces = await ctx.db
-      .select({ workspaceId: memberships.workspaceId })
-      .from(memberships)
-      .where(eq(memberships.userId, ctx.session.user.id))
-
-    if (userWorkspaces.length === 0) return []
-
-    const workspaceIds = userWorkspaces.map((w) => w.workspaceId)
-
+    if (!ctx.workspaceId) return []
     return ctx.db
       .select()
       .from(documents)
-      .where(inArray(documents.workspaceId, workspaceIds))
+      .where(eq(documents.workspaceId, ctx.workspaceId))
       .orderBy(documents.createdAt)
   }),
 
@@ -49,18 +34,7 @@ export const documentRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" })
       }
 
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, doc.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
+      if (doc.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "NOT_FOUND" })
       }
 
@@ -81,25 +55,13 @@ export const documentRouter = router({
     }),
 
   create: protectedProcedure.input(insertDocumentSchema).mutation(async ({ ctx, input }) => {
-    const [membership] = await ctx.db
-      .select()
-      .from(memberships)
-      .where(
-        and(
-          eq(memberships.workspaceId, input.workspaceId),
-          eq(memberships.userId, ctx.session.user.id),
-        ),
-      )
-      .limit(1)
-
-    if (!membership) {
-      throw new TRPCError({ code: "FORBIDDEN" })
-    }
+    if (!ctx.workspaceId) throw new TRPCError({ code: "FORBIDDEN" })
 
     const [doc] = await ctx.db
       .insert(documents)
       .values({
         ...input,
+        workspaceId: ctx.workspaceId,
         status: "pending",
       })
       .returning()
@@ -107,7 +69,6 @@ export const documentRouter = router({
     if (!doc) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" })
     }
-
     return doc
   }),
 
@@ -120,23 +81,8 @@ export const documentRouter = router({
         .where(eq(documents.id, input.id))
         .limit(1)
 
-      if (!existing) {
+      if (!existing || existing.workspaceId !== ctx.workspaceId) {
         throw new TRPCError({ code: "NOT_FOUND" })
-      }
-
-      const [membership] = await ctx.db
-        .select()
-        .from(memberships)
-        .where(
-          and(
-            eq(memberships.workspaceId, existing.workspaceId),
-            eq(memberships.userId, ctx.session.user.id),
-          ),
-        )
-        .limit(1)
-
-      if (!membership) {
-        throw new TRPCError({ code: "FORBIDDEN" })
       }
 
       await ctx.db.transaction(async (tx) => {

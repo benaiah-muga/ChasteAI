@@ -1,24 +1,17 @@
 import { eq, inArray, sql, desc } from "drizzle-orm"
-import { agents, conversations, channels, messages, memberships } from "@chaste-ai/db"
+import { agents, conversations, channels, messages } from "@chaste-ai/db"
 import { protectedProcedure, router } from "../trpc"
 
 export const dashboardRouter = router({
   stats: protectedProcedure.query(async ({ ctx }) => {
-    const userWorkspaces = await ctx.db
-      .select({ workspaceId: memberships.workspaceId })
-      .from(memberships)
-      .where(eq(memberships.userId, ctx.session.user.id))
-
-    if (userWorkspaces.length === 0) {
+    if (!ctx.workspaceId) {
       return { agentCount: 0, conversationCount: 0, channelCount: 0, messageCount: 0 }
     }
-
-    const workspaceIds = userWorkspaces.map((w) => w.workspaceId)
 
     const userAgents = await ctx.db
       .select({ id: agents.id })
       .from(agents)
-      .where(inArray(agents.workspaceId, workspaceIds))
+      .where(eq(agents.workspaceId, ctx.workspaceId))
 
     const agentIds = userAgents.map((a) => a.id)
     const agentCount = agentIds.length
@@ -62,19 +55,12 @@ export const dashboardRouter = router({
   }),
 
   recentConversations: protectedProcedure.query(async ({ ctx }) => {
-    const userWorkspaces = await ctx.db
-      .select({ workspaceId: memberships.workspaceId })
-      .from(memberships)
-      .where(eq(memberships.userId, ctx.session.user.id))
-
-    if (userWorkspaces.length === 0) return []
-
-    const workspaceIds = userWorkspaces.map((w) => w.workspaceId)
+    if (!ctx.workspaceId) return []
 
     const userAgents = await ctx.db
       .select({ id: agents.id, name: agents.name })
       .from(agents)
-      .where(inArray(agents.workspaceId, workspaceIds))
+      .where(eq(agents.workspaceId, ctx.workspaceId))
 
     const agentIds = userAgents.map((a) => a.id)
     if (agentIds.length === 0) return []

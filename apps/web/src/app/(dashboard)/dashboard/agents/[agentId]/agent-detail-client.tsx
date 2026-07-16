@@ -12,18 +12,84 @@ import {
   Trash2,
   ExternalLink,
   Pencil,
+  BookOpen,
+  FileText,
+  Globe,
+  Lock,
+  Upload,
+  X,
 } from "lucide-react"
 import { api } from "@/trpc/react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+
+const PROVIDER_PRESETS = [
+  {
+    value: "openai",
+    label: "OpenAI",
+    type: "openai",
+    baseUrl: "https://api.openai.com/v1",
+    model: "gpt-4o",
+  },
+  {
+    value: "groq",
+    label: "Groq",
+    type: "openai-compatible",
+    baseUrl: "https://api.groq.com/openai/v1",
+    model: "mixtral-8x7b-32768",
+  },
+  {
+    value: "nvidia",
+    label: "NVIDIA",
+    type: "openai-compatible",
+    baseUrl: "https://integrate.api.nvidia.com/v1",
+    model: "nvidia/llama-3.1-nemotron-70b-instruct",
+  },
+  {
+    value: "together",
+    label: "Together AI",
+    type: "openai-compatible",
+    baseUrl: "https://api.together.xyz/v1",
+    model: "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+  },
+  {
+    value: "fireworks",
+    label: "Fireworks AI",
+    type: "openai-compatible",
+    baseUrl: "https://api.fireworks.ai/inference/v1",
+    model: "accounts/fireworks/models/llama-v3p1-8b-instruct",
+  },
+  {
+    value: "deepseek",
+    label: "DeepSeek",
+    type: "openai-compatible",
+    baseUrl: "https://api.deepseek.com/v1",
+    model: "deepseek-chat",
+  },
+  {
+    value: "mistral",
+    label: "Mistral AI",
+    type: "openai-compatible",
+    baseUrl: "https://api.mistral.ai/v1",
+    model: "mistral-large-latest",
+  },
+  {
+    value: "custom",
+    label: "Custom (OpenAI Compatible)",
+    type: "openai-compatible",
+    baseUrl: "",
+    model: "",
+  },
+] as const
 
 type Agent = {
   id: string
-  workspaceId: string
   name: string
   description: string | null
   systemPrompt: string | null
+  knowledgeInstructions: string | null
   status: string
   providerConfig: Record<string, unknown>
   createdAt: Date
@@ -38,6 +104,7 @@ const statusVariant: Record<string, "success" | "warning" | "neutral"> = {
 
 const tabs = [
   { id: "overview", label: "Overview", icon: Bot },
+  { id: "knowledge", label: "Knowledge", icon: BookOpen },
   { id: "conversations", label: "Conversations", icon: MessageCircle },
   { id: "channels", label: "Channels", icon: Network },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -70,72 +137,62 @@ function OverviewTab({ agent, onEdit }: { agent: Agent; onEdit: () => void }) {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm">Configuration</CardTitle>
-          <Button variant="outline" size="sm" onClick={onEdit}>
+      <div className="bg-surface border-border rounded-lg border p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-text-primary text-sm font-medium">Configuration</h3>
+          <Button variant="subtle" size="sm" onClick={onEdit}>
             <Pencil className="mr-1 h-3 w-3" />
             Edit
           </Button>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <dt className="text-text-muted mb-1 text-xs font-medium uppercase tracking-wider">
-                Provider
-              </dt>
-              <dd className="text-text-primary text-sm">{getProviderName(agent.providerConfig)}</dd>
-            </div>
-            <div>
-              <dt className="text-text-muted mb-1 text-xs font-medium uppercase tracking-wider">
-                Model
-              </dt>
-              <dd className="text-text-primary font-mono text-xs">
-                {(agent.providerConfig?.model as string) ?? "gpt-4o"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-text-muted mb-1 text-xs font-medium uppercase tracking-wider">
-                Created
-              </dt>
-              <dd className="text-text-primary text-sm">
-                {new Date(agent.createdAt).toLocaleDateString()}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-text-muted mb-1 text-xs font-medium uppercase tracking-wider">
-                Last Updated
-              </dt>
-              <dd className="text-text-primary text-sm">
-                {new Date(agent.updatedAt).toLocaleDateString()}
-              </dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
+        </div>
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <dt className="text-text-muted mb-1 text-xs font-medium uppercase tracking-wider">
+              Provider
+            </dt>
+            <dd className="text-text-primary text-sm">{getProviderName(agent.providerConfig)}</dd>
+          </div>
+          <div>
+            <dt className="text-text-muted mb-1 text-xs font-medium uppercase tracking-wider">
+              Model
+            </dt>
+            <dd className="text-text-primary font-mono text-xs">
+              {(agent.providerConfig?.model as string) ?? "gpt-4o"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-text-muted mb-1 text-xs font-medium uppercase tracking-wider">
+              Created
+            </dt>
+            <dd className="text-text-primary text-sm">
+              {new Date(agent.createdAt).toLocaleDateString()}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-text-muted mb-1 text-xs font-medium uppercase tracking-wider">
+              Last Updated
+            </dt>
+            <dd className="text-text-primary text-sm">
+              {new Date(agent.updatedAt).toLocaleDateString()}
+            </dd>
+          </div>
+        </dl>
+      </div>
 
       {agent.systemPrompt && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">System Prompt</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="bg-surface-high text-text-secondary overflow-x-auto whitespace-pre-wrap rounded-lg p-4 font-mono text-xs leading-relaxed">
-              {agent.systemPrompt}
-            </pre>
-          </CardContent>
-        </Card>
+        <div className="bg-surface border-border rounded-lg border p-5">
+          <h3 className="text-text-primary mb-4 text-sm font-medium">System Prompt</h3>
+          <pre className="bg-bg border-border text-text-secondary overflow-x-auto whitespace-pre-wrap rounded-lg border p-4 font-mono text-sm leading-relaxed">
+            {agent.systemPrompt}
+          </pre>
+        </div>
       )}
 
       {agent.description && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-text-secondary text-sm">{agent.description}</p>
-          </CardContent>
-        </Card>
+        <div className="bg-surface border-border rounded-lg border p-5">
+          <h3 className="text-text-primary mb-4 text-sm font-medium">Description</h3>
+          <p className="text-text-secondary text-sm">{agent.description}</p>
+        </div>
       )}
     </div>
   )
@@ -146,7 +203,7 @@ function ConversationsTab({ agent }: { agent: Agent }) {
 
   if (!conversations || conversations.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-12 text-center">
+      <div className="bg-surface border-border flex flex-col items-center justify-center rounded-lg border px-6 py-16 text-center">
         <MessageCircle className="text-text-muted mb-3 h-8 w-8" />
         <p className="text-text-primary text-sm font-medium">No conversations yet</p>
         <p className="text-text-tertiary mt-1 text-xs">
@@ -157,14 +214,14 @@ function ConversationsTab({ agent }: { agent: Agent }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="bg-surface border-border divide-border divide-y rounded-lg border">
       {conversations.map((conv) => (
         <Link
           key={conv.id}
           href={`/dashboard/agents/${agent.id}/conversations/${conv.id}`}
-          className="border-border hover:bg-surface-hover flex items-center justify-between rounded-lg border px-5 py-4 transition-colors"
+          className="hover:bg-surface-hover flex items-center justify-between px-5 py-4 transition-colors first:rounded-t-lg last:rounded-b-lg"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <span
               className={`inline-block h-2 w-2 rounded-full ${
                 conv.status === "active"
@@ -192,19 +249,206 @@ function ConversationsTab({ agent }: { agent: Agent }) {
   )
 }
 
+function KnowledgeTab({ agent }: { agent: Agent }) {
+  const utils = api.useUtils()
+  const [instructions, setInstructions] = useState(agent.knowledgeInstructions ?? "")
+  const [isSaving, setIsSaving] = useState(false)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+
+  const { data: assignedDocs, isLoading: loadingAssigned } =
+    api.agentKnowledge.getAssignedDocuments.useQuery({ agentId: agent.id })
+  const { data: workspaceDocs } = api.agentKnowledge.getWorkspaceDocuments.useQuery({
+    agentId: agent.id,
+  })
+
+  const updateInstructions = api.agentKnowledge.updateInstructions.useMutation({
+    onSuccess: () => {
+      setIsSaving(false)
+      utils.agent.getById.invalidate({ id: agent.id })
+    },
+  })
+
+  const assignDoc = api.agentKnowledge.assignDocument.useMutation({
+    onSuccess: () => {
+      utils.agentKnowledge.getAssignedDocuments.invalidate({ agentId: agent.id })
+      setShowAssignModal(false)
+    },
+  })
+
+  const unassignDoc = api.agentKnowledge.unassignDocument.useMutation({
+    onSuccess: () => {
+      utils.agentKnowledge.getAssignedDocuments.invalidate({ agentId: agent.id })
+    },
+  })
+
+  function handleSaveInstructions() {
+    setIsSaving(true)
+    updateInstructions.mutate({ agentId: agent.id, instructions: instructions || null })
+  }
+
+  const assignedDocIds = new Set(assignedDocs?.map((d) => d.id) ?? [])
+  const unassignedDocs = workspaceDocs?.filter((d) => !assignedDocIds.has(d.id)) ?? []
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-surface border-border rounded-lg border p-5">
+        <div className="mb-4">
+          <h3 className="text-text-primary text-sm font-medium">Assigned Documents</h3>
+          <p className="text-text-tertiary mt-0.5 text-xs">
+            Documents linked to this agent. Private documents are only accessible by this agent.
+          </p>
+        </div>
+        {loadingAssigned ? (
+          <p className="text-text-muted text-xs">Loading...</p>
+        ) : !assignedDocs || assignedDocs.length === 0 ? (
+          <div className="py-8 text-center">
+            <FileText className="text-text-muted mx-auto mb-2 h-8 w-8" />
+            <p className="text-text-tertiary text-xs">No documents assigned yet</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {assignedDocs.map((doc) => (
+              <div
+                key={doc.id}
+                className="bg-surface-elevated border-border flex items-center justify-between gap-3 rounded-lg border p-3"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="bg-accent/10 text-accent flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                    {doc.sourceType === "website" ? (
+                      <Globe className="h-4 w-4" />
+                    ) : (
+                      <FileText className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-text-primary text-sm font-medium">
+                      {doc.title ?? "Untitled"}
+                    </p>
+                    <p className="text-text-muted text-xs">
+                      {doc.sourceType} · {doc.status}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-text-muted inline-flex items-center gap-1 text-xs">
+                    <Lock className="h-3 w-3" />
+                    Private
+                  </span>
+                  <button
+                    onClick={() => unassignDoc.mutate({ agentId: agent.id, documentId: doc.id })}
+                    className="text-danger hover:text-danger/80 rounded-md p-1 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <button
+          onClick={() => setShowAssignModal(true)}
+          className="text-accent hover:text-accent/80 mt-4 inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
+        >
+          <Upload className="h-3.5 w-3.5" />
+          Assign document
+        </button>
+      </div>
+
+      <div className="bg-surface border-border rounded-lg border p-5">
+        <div className="mb-4">
+          <h3 className="text-text-primary text-sm font-medium">Knowledge Instructions</h3>
+          <p className="text-text-tertiary mt-0.5 text-xs">
+            Custom instructions for how this agent uses its knowledge base.
+          </p>
+        </div>
+        <textarea
+          value={instructions}
+          onChange={(e) => setInstructions(e.target.value)}
+          placeholder="e.g., Always reference pricing information. Prioritize technical documentation over blog posts."
+          className="border-border bg-bg text-text-primary placeholder:text-text-muted focus:ring-accent/20 focus:border-accent w-full resize-y rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          rows={4}
+        />
+        <div className="mt-3 flex justify-end">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleSaveInstructions}
+            disabled={isSaving || instructions === (agent.knowledgeInstructions ?? "")}
+          >
+            {isSaving ? "Saving..." : "Save"}
+          </Button>
+        </div>
+      </div>
+
+      {showAssignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setShowAssignModal(false)} />
+          <div className="bg-bg border-border relative z-10 w-full max-w-lg rounded-xl border p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-text-primary text-sm font-semibold">Assign Document</h3>
+              <button
+                onClick={() => setShowAssignModal(false)}
+                className="text-text-muted hover:text-text-primary transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {unassignedDocs.length === 0 ? (
+              <p className="text-text-tertiary py-6 text-center text-sm">
+                All workspace documents are already assigned to this agent.
+              </p>
+            ) : (
+              <div className="max-h-80 space-y-2 overflow-y-auto">
+                {unassignedDocs.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="bg-surface border-border flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      {doc.sourceType === "website" ? (
+                        <Globe className="text-text-muted h-4 w-4" />
+                      ) : (
+                        <FileText className="text-text-muted h-4 w-4" />
+                      )}
+                      <div>
+                        <p className="text-text-primary text-sm font-medium">
+                          {doc.title ?? "Untitled"}
+                        </p>
+                        <p className="text-text-muted text-xs">
+                          {doc.sourceType} · {doc.status}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => assignDoc.mutate({ agentId: agent.id, documentId: doc.id })}
+                      className="text-accent hover:text-accent/80 text-xs font-medium transition-colors"
+                    >
+                      Assign
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ChannelsTab({ agent }: { agent: Agent }) {
   const { data: channelList } = api.channel.list.useQuery({ agentId: agent.id })
 
   if (!channelList || channelList.length === 0) {
     return (
-      <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-12 text-center">
+      <div className="bg-surface border-border flex flex-col items-center justify-center rounded-lg border px-6 py-16 text-center">
         <Network className="text-text-muted mb-3 h-8 w-8" />
         <p className="text-text-primary text-sm font-medium">No channels yet</p>
         <p className="text-text-tertiary mt-1 text-xs">
           Create a channel to connect this agent to conversations.
         </p>
         <Link href={`/dashboard/agents/${agent.id}/channels/new`} className="mt-4">
-          <Button size="sm">
+          <Button size="sm" variant="secondary">
             <ExternalLink className="mr-1 h-3 w-3" />
             Add Channel
           </Button>
@@ -214,13 +458,13 @@ function ChannelsTab({ agent }: { agent: Agent }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="bg-surface border-border divide-border divide-y rounded-lg border">
       {channelList.map((ch) => (
         <div
           key={ch.id}
-          className="border-border bg-surface group flex items-center gap-4 rounded-xl border p-4 transition-shadow hover:shadow-sm"
+          className="flex items-center gap-4 px-5 py-4 first:rounded-t-lg last:rounded-b-lg"
         >
-          <div className="bg-accent-subtle text-accent flex h-10 w-10 items-center justify-center rounded-lg">
+          <div className="bg-accent/10 text-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
             <Network className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
@@ -233,7 +477,7 @@ function ChannelsTab({ agent }: { agent: Agent }) {
               </Link>
               <Badge variant="neutral">{ch.type}</Badge>
               {ch.isActive === "true" ? (
-                <span className="text-success-text inline-flex items-center gap-1 text-xs">
+                <span className="text-success inline-flex items-center gap-1 text-xs">
                   <span className="bg-success inline-block h-1.5 w-1.5 rounded-full" />
                   Active
                 </span>
@@ -248,7 +492,7 @@ function ChannelsTab({ agent }: { agent: Agent }) {
           </div>
           <Link
             href={`/dashboard/agents/${agent.id}/channels/${ch.id}`}
-            className="text-accent hover:text-accent-strong text-xs font-medium transition-colors"
+            className="text-accent hover:text-accent/80 text-xs font-medium transition-colors"
           >
             Configure
           </Link>
@@ -264,7 +508,7 @@ function AnalyticsTab({ agent }: { agent: Agent }) {
 
   if (!agentStats) {
     return (
-      <div className="border-border bg-surface flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-12 text-center">
+      <div className="bg-surface border-border flex flex-col items-center justify-center rounded-lg border px-6 py-16 text-center">
         <BarChart3 className="text-text-muted mb-3 h-8 w-8" />
         <p className="text-text-primary text-sm font-medium">No analytics yet</p>
         <p className="text-text-tertiary mt-1 text-xs">
@@ -275,18 +519,20 @@ function AnalyticsTab({ agent }: { agent: Agent }) {
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4">
-      <div className="border-border bg-surface rounded-xl border p-4">
-        <p className="text-text-muted text-xs font-medium">Conversations</p>
-        <p className="text-text-primary mt-1 text-2xl font-bold">{agentStats.conversationCount}</p>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="bg-surface border-border rounded-lg border p-5">
+        <p className="text-text-muted text-xs font-medium uppercase tracking-wider">
+          Conversations
+        </p>
+        <p className="text-text-primary mt-2 text-2xl font-bold">{agentStats.conversationCount}</p>
       </div>
-      <div className="border-border bg-surface rounded-xl border p-4">
-        <p className="text-text-muted text-xs font-medium">Messages</p>
-        <p className="text-text-primary mt-1 text-2xl font-bold">{agentStats.messageCount}</p>
+      <div className="bg-surface border-border rounded-lg border p-5">
+        <p className="text-text-muted text-xs font-medium uppercase tracking-wider">Messages</p>
+        <p className="text-text-primary mt-2 text-2xl font-bold">{agentStats.messageCount}</p>
       </div>
-      <div className="border-border bg-surface rounded-xl border p-4">
-        <p className="text-text-muted text-xs font-medium">Avg / Conv</p>
-        <p className="text-text-primary mt-1 text-2xl font-bold">
+      <div className="bg-surface border-border rounded-lg border p-5">
+        <p className="text-text-muted text-xs font-medium uppercase tracking-wider">Avg / Conv</p>
+        <p className="text-text-primary mt-2 text-2xl font-bold">
           {agentStats.conversationCount > 0
             ? Math.round(agentStats.messageCount / agentStats.conversationCount)
             : 0}
@@ -304,8 +550,26 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
   const [name, setName] = useState(initial.name)
   const [description, setDescription] = useState(initial.description ?? "")
   const [systemPrompt, setSystemPrompt] = useState(initial.systemPrompt ?? "")
+  const [knowledgeInstructions, setKnowledgeInstructions] = useState(
+    initial.knowledgeInstructions ?? "",
+  )
   const [status, setStatus] = useState(initial.status)
   const [model, setModel] = useState((initial.providerConfig?.model as string) ?? "gpt-4o")
+  const [apiKey, setApiKey] = useState((initial.providerConfig?.apiKey as string) ?? "")
+  const [baseUrl, setBaseUrl] = useState(
+    (initial.providerConfig?.baseUrl as string) ?? "https://api.openai.com/v1",
+  )
+  const [preset, setPreset] = useState((initial.providerConfig?.preset as string) ?? "openai")
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  function handlePresetChange(value: string) {
+    setPreset(value)
+    const p = PROVIDER_PRESETS.find((pp) => pp.value === value)
+    if (p) {
+      setBaseUrl(p.baseUrl)
+      setModel(p.model)
+    }
+  }
 
   const updateAgent = api.agent.update.useMutation({
     onSuccess: () => {
@@ -325,14 +589,23 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    const currentPreset = PROVIDER_PRESETS.find((p) => p.value === preset)
     updateAgent.mutate({
       id: initial.id,
       data: {
         name,
         description: description || undefined,
         systemPrompt: systemPrompt || undefined,
+        knowledgeInstructions: knowledgeInstructions || undefined,
         status: status as "active" | "draft" | "inactive",
-        providerConfig: { ...initial.providerConfig, model },
+        providerConfig: {
+          ...initial.providerConfig,
+          provider: currentPreset?.type ?? "openai-compatible",
+          preset,
+          model,
+          baseUrl,
+          ...(apiKey ? { apiKey } : {}),
+        },
       },
     })
   }
@@ -346,15 +619,13 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
     })
   }
 
-  async function handleDelete() {
-    if (confirm("Delete this agent permanently?")) {
-      deleteAgent.mutate({ id: initial.id })
-    }
+  async function handleDeleteConfirm() {
+    deleteAgent.mutate({ id: initial.id })
   }
 
   if (isEditing) {
     return (
-      <div className="mx-auto max-w-2xl space-y-8">
+      <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <Link
             href={`/dashboard/agents/${initial.id}`}
@@ -362,98 +633,192 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
               e.preventDefault()
               setIsEditing(false)
             }}
-            className="text-text-tertiary hover:text-text-secondary mb-4 inline-flex items-center gap-1 text-xs font-medium transition-colors"
+            className="text-text-tertiary hover:text-text-primary mb-4 inline-flex items-center gap-1.5 text-sm transition-colors"
           >
-            <ArrowLeft className="h-3 w-3" />
+            <ArrowLeft className="h-4 w-4" />
             Back to agent
           </Link>
-          <h1 className="text-text-primary text-2xl font-semibold tracking-tight">Edit agent</h1>
+          <h1 className="text-text-primary font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
+            Edit agent
+          </h1>
           <p className="text-text-tertiary mt-1 text-sm">Update your agent&apos;s configuration.</p>
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
           {updateAgent.error && (
-            <div className="border-danger-border bg-danger-subtle text-danger-text rounded-lg border px-4 py-3 text-sm">
+            <div className="border-danger bg-danger/10 text-danger rounded-lg border px-4 py-3 text-sm">
               {updateAgent.error.message}
             </div>
           )}
 
-          <div>
-            <label htmlFor="name" className="text-text-primary mb-1.5 block text-sm font-medium">
-              Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="border-border bg-surface text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-              required
-            />
-          </div>
+          <div className="bg-surface border-border space-y-5 rounded-lg border p-5">
+            <h3 className="text-text-primary text-sm font-medium">General</h3>
 
-          <div>
-            <label
-              htmlFor="description"
-              className="text-text-primary mb-1.5 block text-sm font-medium"
-            >
-              Description
-            </label>
-            <input
-              id="description"
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="border-border bg-surface text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-            />
-          </div>
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="name"
+                  className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                >
+                  Name
+                </label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
 
-          <div>
-            <label
-              htmlFor="system-prompt"
-              className="text-text-primary mb-1.5 block text-sm font-medium"
-            >
-              System prompt
-            </label>
-            <textarea
-              id="system-prompt"
-              rows={5}
-              value={systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
-              className="border-border bg-surface text-text-primary focus:border-accent focus:ring-accent block w-full resize-y rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-            />
-          </div>
+              <div>
+                <label
+                  htmlFor="description"
+                  className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                >
+                  Description
+                </label>
+                <Input
+                  id="description"
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="status"
-                className="text-text-primary mb-1.5 block text-sm font-medium"
-              >
-                Status
-              </label>
-              <select
-                id="status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="border-border bg-surface text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-              >
-                <option value="draft">Draft</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="status"
+                    className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                  >
+                    Status
+                  </label>
+                  <select
+                    id="status"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent/20 flex h-9 w-full rounded-lg border px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="preset"
+                    className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                  >
+                    Provider
+                  </label>
+                  <select
+                    id="preset"
+                    value={preset}
+                    onChange={(e) => handlePresetChange(e.target.value)}
+                    className="border-border bg-bg text-text-primary focus:border-accent focus:ring-accent/20 flex h-9 w-full rounded-lg border px-3 py-1 text-sm transition-colors focus:outline-none focus:ring-1"
+                  >
+                    {PROVIDER_PRESETS.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div>
-              <label htmlFor="model" className="text-text-primary mb-1.5 block text-sm font-medium">
-                Model
-              </label>
-              <input
-                id="model"
-                type="text"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="border-border bg-surface text-text-primary focus:border-accent focus:ring-accent block w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-1"
-              />
+          </div>
+
+          <div className="bg-surface border-border space-y-5 rounded-lg border p-5">
+            <h3 className="text-text-primary text-sm font-medium">AI Configuration</h3>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="api-key"
+                    className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                  >
+                    API Key
+                  </label>
+                  <Input
+                    id="api-key"
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="Leave blank to use env default"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="base-url"
+                    className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                  >
+                    Base URL
+                  </label>
+                  <Input
+                    id="base-url"
+                    type="text"
+                    value={baseUrl}
+                    onChange={(e) => setBaseUrl(e.target.value)}
+                    placeholder="https://api.openai.com/v1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="model"
+                  className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                >
+                  Model
+                </label>
+                <Input
+                  id="model"
+                  type="text"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-surface border-border space-y-5 rounded-lg border p-5">
+            <h3 className="text-text-primary text-sm font-medium">System Instructions</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="system-prompt"
+                  className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                >
+                  System prompt
+                </label>
+                <textarea
+                  id="system-prompt"
+                  rows={5}
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                  className="border-border text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-accent/20 flex w-full resize-y rounded-lg border bg-transparent px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-1"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="knowledge-instructions"
+                  className="text-text-secondary mb-1.5 block text-[13px] font-medium"
+                >
+                  Knowledge instructions
+                </label>
+                <textarea
+                  id="knowledge-instructions"
+                  rows={3}
+                  value={knowledgeInstructions}
+                  onChange={(e) => setKnowledgeInstructions(e.target.value)}
+                  className="border-border text-text-primary placeholder:text-text-muted focus:border-accent focus:ring-accent/20 flex w-full resize-y rounded-lg border bg-transparent px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-1"
+                  placeholder="e.g., Always reference pricing info. Prioritize technical docs over blog posts."
+                />
+              </div>
             </div>
           </div>
 
@@ -475,26 +840,26 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <Link
           href="/dashboard/agents"
-          className="text-text-tertiary hover:text-text-secondary mb-4 inline-flex items-center gap-1 text-xs font-medium transition-colors"
+          className="text-text-tertiary hover:text-text-primary mb-4 inline-flex items-center gap-1.5 text-sm transition-colors"
         >
-          <ArrowLeft className="h-3 w-3" />
+          <ArrowLeft className="h-4 w-4" />
           Back to agents
         </Link>
       </div>
 
-      <div className="border-border bg-surface rounded-xl border">
-        <div className="border-border flex flex-col gap-4 border-b px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+      <div className="bg-surface border-border rounded-lg border p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
-            <div className="bg-accent-subtle text-accent flex h-12 w-12 items-center justify-center rounded-xl">
+            <div className="bg-accent/10 text-accent flex h-12 w-12 items-center justify-center rounded-lg">
               <Bot className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-text-primary text-xl font-semibold tracking-tight">
+                <h1 className="text-text-primary font-[family-name:var(--font-display)] text-xl font-semibold">
                   {initial.name}
                 </h1>
                 <Badge variant={statusVariant[initial.status] ?? "neutral"}>
@@ -506,8 +871,14 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleToggleStatus}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/dashboard/agents/${initial.id}/preview`}>
+              <Button variant="outline" size="sm">
+                <ExternalLink className="mr-1 h-3 w-3" />
+                Preview
+              </Button>
+            </Link>
+            <Button variant="secondary" size="sm" onClick={handleToggleStatus}>
               {status === "active" ? "Deactivate" : "Activate"}
             </Button>
             <Button size="sm" onClick={() => setIsEditing(true)}>
@@ -516,17 +887,22 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
             </Button>
           </div>
         </div>
+      </div>
 
-        <div className="border-border flex overflow-x-auto border-b">
+      <div className="relative">
+        <div
+          className="border-border flex overflow-x-auto border-b"
+          style={{ scrollbarWidth: "none" }}
+        >
           {tabs.map((tab) => {
             const Icon = tab.icon
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                   activeTab === tab.id
-                    ? "border-accent text-text-primary"
+                    ? "text-text-primary border-accent"
                     : "text-text-tertiary hover:text-text-secondary border-transparent"
                 }`}
               >
@@ -536,30 +912,42 @@ export function AgentDetailClient({ agent: initial }: { agent: Agent }) {
             )
           })}
         </div>
+        <div className="from-bg pointer-events-none absolute bottom-0 right-0 top-0 w-8 bg-gradient-to-l to-transparent sm:hidden" />
 
-        <div className="p-6">
+        <div className="py-6">
           {activeTab === "overview" && (
             <OverviewTab agent={initial} onEdit={() => setIsEditing(true)} />
           )}
+          {activeTab === "knowledge" && <KnowledgeTab agent={initial} />}
           {activeTab === "conversations" && <ConversationsTab agent={initial} />}
           {activeTab === "channels" && <ChannelsTab agent={initial} />}
           {activeTab === "analytics" && <AnalyticsTab agent={initial} />}
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="border-border flex items-center justify-between border-t pt-6">
         <div className="text-text-muted text-xs">
           Agent ID: <span className="font-mono">{initial.id}</span>
         </div>
         <button
-          onClick={handleDelete}
+          onClick={() => setShowDeleteConfirm(true)}
           disabled={deleteAgent.isPending}
-          className="text-danger hover:text-danger-text inline-flex items-center gap-1 text-xs font-medium transition-colors disabled:opacity-50"
+          className="text-danger/80 hover:text-danger inline-flex items-center gap-1 text-xs font-medium transition-colors disabled:opacity-50"
         >
           <Trash2 className="h-3 w-3" />
           {deleteAgent.isPending ? "Deleting..." : "Delete agent"}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={`Delete "${initial.name}"?`}
+        description="This will permanently remove this agent and all its conversations. This action cannot be undone."
+        confirmText={initial.name}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setShowDeleteConfirm(false)}
+        loading={deleteAgent.isPending}
+      />
     </div>
   )
 }

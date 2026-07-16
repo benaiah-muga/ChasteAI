@@ -9,6 +9,7 @@ export const conversations = sqliteTable("conversations", {
   channelId: text("channel_id").notNull(),
   externalUserId: text("external_user_id"),
   status: text("status").notNull().$type<ConversationStatus>().default("active"),
+  isTest: integer("is_test", { mode: "boolean" }).notNull().default(false),
   metadata: jsonText<Record<string, unknown>>("metadata").default({}),
   messageCount: integer("message_count").notNull().default(0),
   createdAt: timestampNow("created_at"),

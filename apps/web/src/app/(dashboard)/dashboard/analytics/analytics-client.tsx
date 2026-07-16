@@ -11,7 +11,6 @@ import {
   Line,
 } from "recharts"
 import { BarChart3, Download } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
 type Overview = {
@@ -66,20 +65,14 @@ const channelColors: Record<string, string> = {
   widget: "var(--color-accent)",
   web: "var(--color-info)",
   api: "var(--color-warning)",
-  slack: "var(--color-success)",
-  discord: "var(--color-accent-strong)",
   telegram: "var(--color-primary)",
-  whatsapp: "var(--color-success-strong)",
 }
 
 const channelIcons: Record<string, string> = {
   widget: "Widget",
   web: "Web",
   api: "API",
-  slack: "Slack",
-  discord: "Discord",
   telegram: "Telegram",
-  whatsapp: "WhatsApp",
 }
 
 function CustomTooltip({
@@ -93,9 +86,11 @@ function CustomTooltip({
 }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="border-border bg-surface-elevated rounded-lg border px-3 py-2 shadow-lg">
-      <p className="text-text-primary text-xs font-medium">{label}</p>
-      <p className="text-accent text-xs font-semibold">{payload[0]?.value ?? 0} conversations</p>
+    <div className="bg-surface-elevated border-border rounded-lg border px-3 py-2 shadow-lg">
+      <p className="text-text-muted text-xs">{label}</p>
+      <p className="text-accent text-sm font-semibold tabular-nums">
+        {payload[0]?.value ?? 0} conversations
+      </p>
     </div>
   )
 }
@@ -120,25 +115,21 @@ export function AnalyticsClient({
       label: "Total Conversations",
       value: initialOverview.totalConversations,
       sub: `${initialOverview.conversationsToday} today`,
-      accent: "accent",
     },
     {
       label: "Total Messages",
       value: initialOverview.totalMessages,
       sub: `${initialOverview.messagesToday} today`,
-      accent: "success",
     },
     {
       label: "Active Now",
       value: initialOverview.activeConversations,
       sub: `${initialOverview.resolvedConversations} resolved`,
-      accent: "warning",
     },
     {
       label: "Avg / Conversation",
       value: initialOverview.avgMessagesPerConversation,
       sub: "messages per conv",
-      accent: "neutral",
     },
   ]
 
@@ -156,8 +147,10 @@ export function AnalyticsClient({
     <div className="mx-auto max-w-6xl space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-text-primary text-2xl font-semibold tracking-tight">Analytics</h1>
-          <p className="text-text-tertiary mt-1 text-sm">
+          <h1 className="text-text-primary font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
+            Analytics
+          </h1>
+          <p className="text-text-muted mt-1 text-sm">
             Metrics and insights for your customer support operations.
           </p>
         </div>
@@ -169,7 +162,7 @@ export function AnalyticsClient({
                 onClick={() => setTimeRange(range.value)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   timeRange === range.value
-                    ? "bg-surface-active text-text-primary"
+                    ? "bg-surface-elevated text-text-primary"
                     : "text-text-tertiary hover:text-text-secondary"
                 }`}
               >
@@ -177,7 +170,7 @@ export function AnalyticsClient({
               </button>
             ))}
           </div>
-          <button className="border-border text-text-tertiary hover:text-text-secondary hover:bg-surface-hover inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors">
+          <button className="border-border text-text-tertiary hover:text-text-secondary hover:bg-surface-elevated inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors">
             <Download className="h-3.5 w-3.5" />
             Export
           </button>
@@ -185,35 +178,25 @@ export function AnalyticsClient({
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {statCards.map((card) => {
-          const accentMap: Record<string, string> = {
-            accent: "bg-accent-subtle text-accent-text ring-1 ring-accent-border",
-            success: "bg-success-subtle text-success-text ring-1 ring-success-border",
-            warning: "bg-warning-subtle text-warning-text ring-1 ring-warning-border",
-            neutral: "bg-surface-high text-text-tertiary ring-1 ring-border",
-          }
-          return (
-            <div
-              key={card.label}
-              className="border-border bg-surface group rounded-xl border p-5 transition-shadow hover:shadow-sm"
-            >
-              <div
-                className={`mb-3 inline-flex h-1 w-10 items-center justify-center rounded-full ${accentMap[card.accent]}`}
-              />
-              <p className="text-text-primary mb-1 text-2xl font-bold">{card.value}</p>
-              <p className="text-text-secondary text-xs font-medium">{card.label}</p>
-              <p className="text-text-muted mt-0.5 text-xs">{card.sub}</p>
-            </div>
-          )
-        })}
+        {statCards.map((card) => (
+          <div key={card.label} className="bg-surface border-border rounded-lg border p-5">
+            <p className="text-text-primary font-[family-name:var(--font-display)] text-3xl font-semibold tabular-nums">
+              {card.value}
+            </p>
+            <p className="text-text-muted mt-2 text-xs font-medium uppercase tracking-wide">
+              {card.label}
+            </p>
+            <p className="text-text-tertiary mt-1 text-xs">{card.sub}</p>
+          </div>
+        ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Conversation Volume</CardTitle>
-          <p className="text-text-muted text-xs">Daily conversations over time</p>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-surface border-border rounded-lg border">
+        <div className="px-5 pb-4 pt-5">
+          <p className="text-text-primary text-sm font-medium">Conversation Volume</p>
+          <p className="text-text-muted mt-0.5 text-xs">Daily conversations over time</p>
+        </div>
+        <div className="px-5 pb-5">
           {!hasData ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <BarChart3 className="text-text-muted mb-3 h-10 w-10" />
@@ -226,12 +209,7 @@ export function AnalyticsClient({
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={initialVolume} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    className="stroke-border"
-                    stroke="currentColor"
-                    opacity={0.3}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.4} />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 11, fill: "var(--color-text-muted)" }}
@@ -239,13 +217,11 @@ export function AnalyticsClient({
                       const d = new Date(val)
                       return `${d.getMonth() + 1}/${d.getDate()}`
                     }}
-                    className="text-text-muted"
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     tick={{ fontSize: 11, fill: "var(--color-text-muted)" }}
-                    className="text-text-muted"
                     axisLine={false}
                     tickLine={false}
                     allowDecimals={false}
@@ -257,22 +233,27 @@ export function AnalyticsClient({
                     stroke="var(--color-accent)"
                     strokeWidth={2}
                     dot={false}
-                    activeDot={{ r: 4, fill: "var(--color-accent)" }}
+                    activeDot={{
+                      r: 4,
+                      fill: "var(--color-accent)",
+                      stroke: "var(--color-surface)",
+                      strokeWidth: 2,
+                    }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Channel Distribution</CardTitle>
-            <p className="text-text-muted text-xs">Conversations by channel</p>
-          </CardHeader>
-          <CardContent>
+        <div className="bg-surface border-border rounded-lg border">
+          <div className="px-5 pb-4 pt-5">
+            <p className="text-text-primary text-sm font-medium">Channel Distribution</p>
+            <p className="text-text-muted mt-0.5 text-xs">Conversations by channel</p>
+          </div>
+          <div className="px-5 pb-5">
             {sortedChannels.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <p className="text-text-tertiary text-xs">No channel data yet.</p>
@@ -283,21 +264,25 @@ export function AnalyticsClient({
                   const pct = Math.round((ch.conversationCount / maxChannelCount) * 100)
                   return (
                     <div key={ch.channelType}>
-                      <div className="mb-1 flex items-center justify-between text-xs">
-                        <span className="text-text-primary font-medium capitalize">
+                      <div className="mb-1.5 flex items-center justify-between text-xs">
+                        <span className="text-text-primary font-medium">
                           {channelIcons[ch.channelType] ?? ch.channelType}
                         </span>
-                        <span className="text-text-tertiary">
-                          {ch.conversationCount} (
-                          {Math.round(
-                            (ch.conversationCount /
-                              (sortedChannels.reduce((s, c) => s + c.conversationCount, 0) || 1)) *
-                              100,
-                          )}
-                          %)
+                        <span className="text-text-tertiary tabular-nums">
+                          {ch.conversationCount}{" "}
+                          <span className="text-text-muted">
+                            (
+                            {Math.round(
+                              (ch.conversationCount /
+                                (sortedChannels.reduce((s, c) => s + c.conversationCount, 0) ||
+                                  1)) *
+                                100,
+                            )}
+                            %)
+                          </span>
                         </span>
                       </div>
-                      <div className="bg-surface-high h-2 overflow-hidden rounded-full">
+                      <div className="bg-surface-elevated h-1.5 overflow-hidden rounded-full">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
@@ -312,15 +297,15 @@ export function AnalyticsClient({
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Conversation Status</CardTitle>
-            <p className="text-text-muted text-xs">Breakdown by current status</p>
-          </CardHeader>
-          <CardContent>
+        <div className="bg-surface border-border rounded-lg border">
+          <div className="px-5 pb-4 pt-5">
+            <p className="text-text-primary text-sm font-medium">Conversation Status</p>
+            <p className="text-text-muted mt-0.5 text-xs">Breakdown by current status</p>
+          </div>
+          <div className="px-5 pb-5">
             {initialStatus.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <p className="text-text-tertiary text-xs">No status data yet.</p>
@@ -335,29 +320,35 @@ export function AnalyticsClient({
                   const total = initialStatus.reduce((sum, st) => sum + st.count, 0)
                   const pct = Math.round((s.count / total) * 100)
                   return (
-                    <div key={s.status} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div key={s.status} className="flex items-center justify-between py-1">
+                      <div className="flex items-center gap-2.5">
                         <Badge variant={config.variant}>{config.label}</Badge>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-text-primary text-sm font-medium">{s.count}</span>
-                        <span className="text-text-muted w-10 text-right text-xs">{pct}%</span>
+                        <span className="text-text-primary text-sm font-medium tabular-nums">
+                          {s.count}
+                        </span>
+                        <span className="text-text-muted w-10 text-right text-xs tabular-nums">
+                          {pct}%
+                        </span>
                       </div>
                     </div>
                   )
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Agent Performance</CardTitle>
-          <p className="text-text-muted text-xs">Conversations and messages handled per agent</p>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-surface border-border rounded-lg border">
+        <div className="px-5 pb-4 pt-5">
+          <p className="text-text-primary text-sm font-medium">Agent Performance</p>
+          <p className="text-text-muted mt-0.5 text-xs">
+            Conversations and messages handled per agent
+          </p>
+        </div>
+        <div className="px-5 pb-5">
           {sortedAgents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <p className="text-text-tertiary text-xs">No agents configured yet.</p>
@@ -366,7 +357,7 @@ export function AnalyticsClient({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-border text-text-muted border-b text-left text-xs font-medium">
+                  <tr className="border-border text-text-muted border-b text-left text-xs font-medium uppercase tracking-wide">
                     <th className="pb-3 pr-4">Agent</th>
                     <th className="pb-3 pr-4">Conversations</th>
                     <th className="pb-3 pr-4">Messages</th>
@@ -377,12 +368,16 @@ export function AnalyticsClient({
                   {sortedAgents.map((agent) => (
                     <tr
                       key={agent.agentId}
-                      className="border-border hover:bg-surface-hover border-b transition-colors last:border-0"
+                      className="border-border hover:bg-surface-elevated border-b transition-colors last:border-0"
                     >
                       <td className="text-text-primary py-3 pr-4 font-medium">{agent.agentName}</td>
-                      <td className="text-text-secondary py-3 pr-4">{agent.conversationCount}</td>
-                      <td className="text-text-secondary py-3 pr-4">{agent.messageCount}</td>
-                      <td className="text-text-tertiary py-3">
+                      <td className="text-text-secondary py-3 pr-4 tabular-nums">
+                        {agent.conversationCount}
+                      </td>
+                      <td className="text-text-secondary py-3 pr-4 tabular-nums">
+                        {agent.messageCount}
+                      </td>
+                      <td className="text-text-tertiary py-3 tabular-nums">
                         {totalConversations > 0
                           ? `${Math.round((agent.conversationCount / totalConversations) * 100)}%`
                           : "—"}
@@ -393,8 +388,8 @@ export function AnalyticsClient({
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

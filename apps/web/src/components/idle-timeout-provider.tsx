@@ -14,14 +14,8 @@ function toMs(minutes: number) {
   return minutes * 60 * 1000
 }
 
-export function IdleTimeoutProvider({
-  children,
-  workspaceId,
-}: {
-  children: React.ReactNode
-  workspaceId: string
-}) {
-  const { data: settings } = api.workspace.getSettings.useQuery({ id: workspaceId })
+export function IdleTimeoutProvider({ children }: { children: React.ReactNode }) {
+  const { data: settings } = api.workspace.getSettings.useQuery()
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
 
