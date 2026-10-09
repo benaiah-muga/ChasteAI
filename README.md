@@ -1,8 +1,5 @@
 # ChasteAI
 
-<p align="center">
-  <img src="apps/web/public/logo.png" alt="ChasteAI" width="120" />
-</p>
 
 **Open-source AI customer support infrastructure.** Self-host everything locally with zero external dependencies.
 
