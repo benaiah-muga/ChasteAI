@@ -5,7 +5,7 @@ export const documentChunks = pgTable("document_chunks", {
   documentId: uuid("document_id").notNull(),
   content: text("content").notNull(),
   chunkIndex: integer("chunk_index").notNull(),
-  // Uses pgvector in production; stored as text in dev (Phase 1)
+  // pgvector: text for dev, vector(1024) in production via migration 0009
   embedding: text("embedding"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),

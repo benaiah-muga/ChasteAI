@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Loader2 } from "lucide-react"
+import { Check, Loader2, Shield } from "lucide-react"
 import { ExpandableError } from "./expandable-error"
 import {
   createAccountAction,
@@ -18,6 +18,13 @@ const STEPS = ["Account", "Database", "Provider", "Workspace", "Done"]
 
 const PROVIDER_PRESETS = [
   {
+    value: "nvidia",
+    label: "NVIDIA NIM",
+    type: "openai-compatible",
+    baseUrl: "https://integrate.api.nvidia.com/v1",
+    model: "poolside/laguna-xs-2.1",
+  },
+  {
     value: "openai",
     label: "OpenAI",
     type: "openai",
@@ -30,13 +37,6 @@ const PROVIDER_PRESETS = [
     type: "openai-compatible",
     baseUrl: "https://api.groq.com/openai/v1",
     model: "mixtral-8x7b-32768",
-  },
-  {
-    value: "nvidia",
-    label: "NVIDIA",
-    type: "openai-compatible",
-    baseUrl: "https://integrate.api.nvidia.com/v1",
-    model: "nvidia/llama-3.1-nemotron-70b-instruct",
   },
   {
     value: "together",
@@ -88,6 +88,10 @@ type WizardData = {
   apiKey: string
   baseUrl: string
   model: string
+  temperature: number
+  contentSafetyEnabled: boolean
+  contentSafetyModel: string
+  contentSafetyBaseUrl: string
 }
 
 type TestState = {
@@ -106,17 +110,22 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
     agentName: "Support Agent",
     agentDescription: "",
     systemPrompt: "",
-    providerPreset: "openai",
-    providerType: "openai",
+    providerPreset: "nvidia",
+    providerType: "openai-compatible",
     apiKey: "",
-    baseUrl: "https://api.openai.com/v1",
-    model: "gpt-4o",
+    baseUrl: "https://integrate.api.nvidia.com/v1",
+    model: "poolside/laguna-xs-2.1",
+    temperature: 0.7,
+    contentSafetyEnabled: true,
+    contentSafetyModel: "nvidia/nemotron-3.5-content-safety",
+    contentSafetyBaseUrl: "https://integrate.api.nvidia.com/v1",
   })
   const [error, setError] = useState<string | null>(null)
   const [errorDetails, setErrorDetails] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [dbTest, setDbTest] = useState<TestState>({ status: "idle" })
   const [providerTest, setProviderTest] = useState<TestState>({ status: "idle" })
+  const [safetyTest, setSafetyTest] = useState<TestState>({ status: "idle" })
 
   function update(fields: Partial<WizardData>) {
     setData((prev) => ({ ...prev, ...fields }))
@@ -175,6 +184,41 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
     }
   }
 
+  async function testSafety() {
+    if (!data.apiKey) {
+      setSafetyTest({ status: "failed", message: "Enter an API key first." })
+      return
+    }
+    setSafetyTest({ status: "testing" })
+    try {
+      const res = await fetch("/api/models/test-safety", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: data.apiKey,
+          baseUrl: data.contentSafetyBaseUrl,
+          model: data.contentSafetyModel,
+        }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        setSafetyTest({ status: "passed" })
+      } else {
+        setSafetyTest({
+          status: "failed",
+          message: result.error ?? "Connection test failed",
+          details: result.details,
+        })
+      }
+    } catch (e) {
+      setSafetyTest({
+        status: "failed",
+        message: "Connection test failed",
+        details: e instanceof Error ? e.message : "Unknown error",
+      })
+    }
+  }
+
   async function handleNext() {
     setError(null)
     setErrorDetails(null)
@@ -226,6 +270,10 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
         apiKey: data.apiKey,
         baseUrl: data.baseUrl,
         model: data.model,
+        temperature: data.temperature,
+        contentSafetyEnabled: data.contentSafetyEnabled,
+        contentSafetyModel: data.contentSafetyModel,
+        contentSafetyBaseUrl: data.contentSafetyBaseUrl,
       })
       setBusy(false)
       if ("error" in result) {
@@ -454,7 +502,7 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
                   type="password"
                   value={data.apiKey}
                   onChange={(e) => update({ apiKey: e.target.value })}
-                  placeholder="sk-..."
+                  placeholder="nvapi-..."
                 />
               </div>
               {(data.providerPreset === "custom" || data.baseUrl) && (
@@ -466,10 +514,86 @@ export function WizardClient({ initialDbUrl }: { initialDbUrl?: string }) {
                     type="text"
                     value={data.model}
                     onChange={(e) => update({ model: e.target.value })}
-                    placeholder="gpt-4o"
+                    placeholder="poolside/laguna-xs-2.1"
                   />
                 </div>
               )}
+              <div>
+                <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                  Temperature: {data.temperature}
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={data.temperature}
+                  onChange={(e) => update({ temperature: parseFloat(e.target.value) })}
+                  className="w-full"
+                />
+                <div className="text-text-muted mt-1 flex justify-between text-[11px]">
+                  <span>Precise (0)</span>
+                  <span>Creative (2)</span>
+                </div>
+              </div>
+              <div className="border-border space-y-3 rounded-lg border p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield className="text-accent h-4 w-4" />
+                    <div>
+                      <label className="text-text-primary text-[13px] font-medium">
+                        Content Safety
+                      </label>
+                      <p className="text-text-muted text-xs">
+                        Moderate AI responses for harmful content
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => update({ contentSafetyEnabled: !data.contentSafetyEnabled })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                      data.contentSafetyEnabled ? "bg-accent" : "bg-surface-high"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${
+                        data.contentSafetyEnabled ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {data.contentSafetyEnabled && (
+                  <>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                          Safety Model
+                        </label>
+                        <Input
+                          type="text"
+                          value={data.contentSafetyModel}
+                          onChange={(e) => update({ contentSafetyModel: e.target.value })}
+                          placeholder="nvidia/nemotron-3.5-content-safety"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-text-secondary mb-1 block text-[13px] font-medium">
+                          Safety Base URL
+                        </label>
+                        <Input
+                          type="text"
+                          value={data.contentSafetyBaseUrl}
+                          onChange={(e) => update({ contentSafetyBaseUrl: e.target.value })}
+                          placeholder="https://integrate.api.nvidia.com/v1"
+                        />
+                      </div>
+                    </div>
+                    <TestButton state={safetyTest} onTest={testSafety} label="Test Safety Model" />
+                  </>
+                )}
+              </div>
             </div>
             <div className="mt-2">
               <TestButton state={providerTest} onTest={testProvider} label="Test Connection" />

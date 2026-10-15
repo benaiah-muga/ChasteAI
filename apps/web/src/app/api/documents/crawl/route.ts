@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { getDatabaseClient } from "@chaste-ai/db"
 import { eq, and } from "drizzle-orm"
 import { z } from "zod"
-import { documents, documentChunks, memberships } from "@chaste-ai/db"
+import { documents, documentChunks, memberships, agents } from "@chaste-ai/db"
 import { createProvider, chunkText } from "@chaste-ai/ai"
 import { crawlSite } from "@chaste-ai/rag"
 import { auth } from "@/auth"
@@ -15,6 +15,7 @@ const crawlBodySchema = z.object({
   sourceUrl: z.string().url(),
   maxPages: z.number().min(1).max(500).default(50),
   maxDepth: z.number().min(1).max(5).default(3),
+  agentId: z.string().uuid().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -33,11 +34,7 @@ export async function POST(req: NextRequest) {
 
   const db = getDatabaseClient()
 
-  const [doc] = await db
-    .select()
-    .from(documents)
-    .where(eq(documents.id, body.documentId))
-    .limit(1)
+  const [doc] = await db.select().from(documents).where(eq(documents.id, body.documentId)).limit(1)
 
   if (!doc) {
     return new Response("Document not found", { status: 404 })
@@ -47,10 +44,7 @@ export async function POST(req: NextRequest) {
     .select()
     .from(memberships)
     .where(
-      and(
-        eq(memberships.workspaceId, doc.workspaceId),
-        eq(memberships.userId, session.user.id),
-      ),
+      and(eq(memberships.workspaceId, doc.workspaceId), eq(memberships.userId, session.user.id)),
     )
     .limit(1)
 
@@ -63,6 +57,7 @@ export async function POST(req: NextRequest) {
   void crawlAndIngest(db, body.documentId, body.sourceUrl, {
     maxPages: body.maxPages,
     maxDepth: body.maxDepth,
+    agentId: body.agentId,
   })
 
   return new Response(JSON.stringify({ success: true, documentId: body.documentId }), {
@@ -74,18 +69,46 @@ async function crawlAndIngest(
   db: ReturnType<typeof getDatabaseClient>,
   documentId: string,
   sourceUrl: string,
-  options: { maxPages: number; maxDepth: number },
+  options: { maxPages: number; maxDepth: number; agentId?: string },
 ) {
   try {
+    let embeddingConfig: {
+      model: string
+      baseUrl?: string
+      apiKey?: string
+      dimensions?: number
+    } | null = null
+    if (options.agentId) {
+      const [agent] = await db.select().from(agents).where(eq(agents.id, options.agentId)).limit(1)
+      if (agent?.providerConfig) {
+        const config = agent.providerConfig as Record<string, unknown>
+        const emb = config.embedding as Record<string, unknown> | undefined
+        if (emb?.model) {
+          embeddingConfig = {
+            model: emb.model as string,
+            baseUrl: emb.baseUrl as string | undefined,
+            apiKey: emb.apiKey as string | undefined,
+            dimensions: emb.dimensions as number | undefined,
+          }
+        }
+      }
+    }
+
     const pages = await crawlSite(sourceUrl, {
       maxPages: options.maxPages,
       maxDepth: options.maxDepth,
     })
 
+    const embeddingModel = embeddingConfig?.model ?? "text-embedding-3-small"
+    const embeddingBaseUrl = embeddingConfig?.baseUrl
+    const embeddingApiKey =
+      embeddingConfig?.apiKey ?? process.env.OPENAI_API_KEY ?? process.env.GROQ_API_KEY
+
     const provider = createProvider({
       type: "openai-compatible",
-      model: "gpt-4o",
-      apiKey: process.env.OPENAI_API_KEY ?? process.env.GROQ_API_KEY,
+      model: embeddingModel,
+      apiKey: embeddingApiKey,
+      baseUrl: embeddingBaseUrl,
     })
 
     let totalChunks = 0
@@ -99,7 +122,7 @@ async function crawlAndIngest(
 
         try {
           const embeddings = await provider.embeddings({
-            model: "text-embedding-3-small",
+            model: embeddingModel,
             input: chunk.content,
           })
           embedding = embeddings[0]?.embedding ?? null

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { getDatabaseClient } from "@chaste-ai/db"
 import { eq, and } from "drizzle-orm"
 import { z } from "zod"
-import { documents, documentChunks, memberships, agentDocuments } from "@chaste-ai/db"
+import { documents, documentChunks, memberships, agentDocuments, agents } from "@chaste-ai/db"
 import { createProvider, chunkText } from "@chaste-ai/ai"
 import { auth } from "@/auth"
 
@@ -52,13 +52,41 @@ export async function POST(req: NextRequest, _props: { params: Promise<Record<st
 
   await db.update(documents).set({ status: "processing" }).where(eq(documents.id, body.documentId))
 
+  let embeddingConfig: {
+    model: string
+    baseUrl?: string
+    apiKey?: string
+    dimensions?: number
+  } | null = null
+  if (body.agentId) {
+    const [agent] = await db.select().from(agents).where(eq(agents.id, body.agentId)).limit(1)
+    if (agent?.providerConfig) {
+      const config = agent.providerConfig as Record<string, unknown>
+      const emb = config.embedding as Record<string, unknown> | undefined
+      if (emb?.model) {
+        embeddingConfig = {
+          model: emb.model as string,
+          baseUrl: emb.baseUrl as string | undefined,
+          apiKey: emb.apiKey as string | undefined,
+          dimensions: emb.dimensions as number | undefined,
+        }
+      }
+    }
+  }
+
   try {
     const chunks = chunkText(body.content, { maxChunkSize: 1000, overlap: 200 })
 
+    const embeddingModel = embeddingConfig?.model ?? "text-embedding-3-small"
+    const embeddingBaseUrl = embeddingConfig?.baseUrl
+    const embeddingApiKey =
+      embeddingConfig?.apiKey ?? process.env.OPENAI_API_KEY ?? process.env.GROQ_API_KEY
+
     const provider = createProvider({
       type: "openai-compatible",
-      model: "gpt-4o",
-      apiKey: process.env.OPENAI_API_KEY ?? process.env.GROQ_API_KEY,
+      model: embeddingModel,
+      apiKey: embeddingApiKey,
+      baseUrl: embeddingBaseUrl,
     })
 
     const chunkRecords: (typeof documentChunks.$inferInsert)[] = []
@@ -68,7 +96,7 @@ export async function POST(req: NextRequest, _props: { params: Promise<Record<st
 
       try {
         const embeddings = await provider.embeddings({
-          model: "text-embedding-3-small",
+          model: embeddingModel,
           input: chunk.content,
         })
         embedding = embeddings[0]?.embedding ?? null

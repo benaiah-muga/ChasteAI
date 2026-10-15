@@ -7,11 +7,13 @@
 - **Multi-channel** (web widget, API, etc.)
 - **Document ingestion** with RAG (retrieval-augmented generation)
 - **Agent knowledge management** — assign documents to specific agents, custom knowledge instructions
+- **Content safety** — configurable moderation of inputs and responses via NVIDIA Nemotron
+- **Model configuration** — temperature, max tokens, top-p, and live model list fetching
 - **Analytics** across conversations, agents, and channels
 - **Security codes** — recovery codes for password reset without email
 - **Test conversations** — preview mode for testing agents without polluting analytics
 - **API keys** for external integrations
-- **Bring your own LLM** — any OpenAI-compatible API works (OpenAI, Groq, Together, LiteLLM, etc.)
+- **Bring your own LLM** — any OpenAI-compatible API works (OpenAI, Groq, NVIDIA NIM, Together, LiteLLM, etc.)
 
 ---
 
@@ -86,12 +88,67 @@ When creating an agent in the dashboard:
 
 No code changes. No new provider files. Just config.
 
+### NVIDIA NIM (recommended)
+
+ChasteAI works great with NVIDIA NIM — managed AI inference with content safety built-in.
+
+**Get your API key:** https://build.nvidia.com (free tier available)
+
+**Models:**
+| Model | Use Case | Dimensions |
+|-------|----------|------------|
+| `poolside/laguna-xs-2.1` | Chat & streaming | — |
+| `baai/bge-m3` | Embeddings (RAG) | 1024 |
+| `nvidia/nemotron-3.5-content-safety` | Content moderation | — |
+
+**Configure in .env:**
+
+```env
+NVIDIA_API_KEY="nvapi-..."
+```
+
+**Agent config:**
+
+```
+Provider: NVIDIA NIM
+Model: poolside/laguna-xs-2.1
+Base URL: https://integrate.api.nvidia.com/v1
+Temperature: 0.7 (adjustable)
+Content Safety: Enabled
+```
+
+### Content Safety
+
+ChasteAI includes built-in content safety via NVIDIA Nemotron. Configure per-agent:
+
+- **Enable/disable** — toggle safety checks on or off
+- **Check responses** — moderate AI responses before sending (default: enabled)
+- **Check inputs** — moderate user messages before processing (default: disabled)
+
+When unsafe content is detected, users receive a friendly error message instead of the response.
+
+### Model Configuration
+
+Fine-tune AI behavior per agent:
+
+- **Temperature** (0-1) — lower = more focused, higher = more creative
+- **Max tokens** — maximum response length
+- **Top-p** — nucleus sampling for response diversity
+- **Fetch models** — pull available models from your provider's API
+
 ### Providers config file
 
 For teams that want to pre-define providers, create `providers.json` in the project root:
 
 ```json
 [
+  {
+    "name": "NVIDIA NIM",
+    "type": "openai-compatible",
+    "apiKey": "nvapi-...",
+    "baseUrl": "https://integrate.api.nvidia.com/v1",
+    "defaultModel": "poolside/laguna-xs-2.1"
+  },
   {
     "name": "OpenAI GPT-4o",
     "type": "openai-compatible",
@@ -125,7 +182,8 @@ For teams that want to pre-define providers, create `providers.json` in the proj
 
 - **Node.js** >= 20
 - **pnpm** >= 10
-- **PostgreSQL** >= 14
+- **PostgreSQL** >= 14 (or use Docker/SQlite)
+- **AI provider** — NVIDIA NIM (recommended), OpenAI, Groq, or Ollama
 
 ### 1. Clone and install
 
@@ -146,10 +204,14 @@ Edit `apps/web/.env` and set:
 ```env
 DATABASE_URL="postgres://postgres:password@localhost:5432/chasteai"
 AUTH_SECRET="generate-a-random-secret-here"
-GROQ_API_KEY="gsk_..."    # free tier, no credit card needed
+
+# NVIDIA NIM (recommended — free tier available)
+NVIDIA_API_KEY="nvapi-..."
+
+# Or use OpenAI/Groq/Ollama (see AI providers section)
 ```
 
-> Get a free Groq API key at https://console.groq.com — no credit card required.
+> Get a free NVIDIA API key at https://build.nvidia.com — no credit card required.
 
 ### 3. Set up the database
 
@@ -157,6 +219,12 @@ GROQ_API_KEY="gsk_..."    # free tier, no credit card needed
 createdb chasteai           # Create the database
 pnpm db:migrate             # Run migrations
 pnpm db:seed                # Seed with dev data
+```
+
+**Optional: Seed test conversations:**
+
+```sh
+pnpm db:seed:conversations  # Create sample conversations for Sudo Inc
 ```
 
 ### 4. Start developing
@@ -179,6 +247,77 @@ Starts PostgreSQL (with pgvector), Redis, MinIO (S3), and Ollama (local LLM).
 
 ---
 
+## Local development alternatives
+
+### Option 1: Ollama (100% local, no API keys)
+
+Run everything locally with Ollama — no external API keys needed.
+
+**1. Install Ollama:** https://ollama.com
+
+**2. Pull models:**
+
+```sh
+ollama pull llama3.2          # Chat model
+ollama pull nomic-embed-text  # Embeddings (1024 dimensions)
+```
+
+**3. Configure .env:**
+
+```env
+DATABASE_URL="postgres://postgres:password@localhost:5432/chasteai"
+AUTH_SECRET="generate-a-random-secret-here"
+# No API keys needed for Ollama
+```
+
+**4. Configure agent in dashboard:**
+
+```
+Provider: OpenAI Compatible
+Base URL: http://localhost:11434/v1
+Model: llama3.2
+API Key: ollama (or any string)
+```
+
+**Pros:** Free, private, runs offline
+**Cons:** Requires decent hardware (8GB+ RAM), slower than cloud
+
+### Option 2: NVIDIA NIM (cloud, free tier)
+
+**Pros:** Fast, free tier, content safety included
+**Cons:** Requires internet, API key needed
+
+### Option 3: Groq (cloud, free tier)
+
+**Pros:** Very fast inference, free tier
+**Cons:** Rate limits, no content safety
+
+### Option 4: OpenAI (cloud, paid)
+
+**Pros:** Best quality, reliable
+**Cons:** Requires credit card, costs money
+
+### Recommended setup for development
+
+For local development, we recommend:
+
+1. **PostgreSQL** via Docker: `docker compose up -d postgres`
+2. **Ollama** for chat: `ollama pull llama3.2`
+3. **Ollama** for embeddings: `ollama pull nomic-embed-text`
+
+This gives you a fully local stack with no external dependencies.
+
+### Recommended setup for production
+
+For production, we recommend:
+
+1. **PostgreSQL** (managed or self-hosted)
+2. **NVIDIA NIM** or **OpenAI** for chat
+3. **NVIDIA NIM** `baai/bge-m3` for embeddings (or Ollama for cost savings)
+4. **Content safety** enabled for response moderation
+
+---
+
 ## Commands
 
 ```sh
@@ -190,10 +329,12 @@ pnpm turbo typecheck  # Type-check all packages
 # Database
 pnpm db:generate      # Generate migration from schema changes
 pnpm db:migrate       # Apply pending migrations
-pnpm db:seed          # Seed dev data
+pnpm db:seed          # Seed dev data (user, workspace, agents)
+pnpm db:seed:conversations  # Seed test conversations (Sudo Inc)
 pnpm db:studio        # Drizzle Studio (db browser at :4983)
 
-# Browser testing (uses agent-browser CLI)
+# Testing
+pnpm test             # Run AI package tests (NVIDIA NIM integration)
 pnpm test:browser:install  # Install Chromium (first time)
 pnpm test:browser           # Open homepage and inspect
 pnpm test:browser:auth      # Sign in with seed account and inspect
@@ -276,9 +417,13 @@ See `.env.example` for the full list. Core ones:
 ```
 DATABASE_URL        PostgreSQL connection string
 AUTH_SECRET         Auth.js secret (generate with `openssl rand -base64 32`)
+
+# AI Providers (at least one required)
+NVIDIA_API_KEY      NVIDIA NIM API key (recommended, free tier)
 OPENAI_API_KEY      OpenAI API key
 GROQ_API_KEY        Groq API key (free, OpenAI-compatible)
-ANTHROPIC_API_KEY   Anthropic API key
+
+# Optional
 AUTH_GITHUB_*       GitHub OAuth credentials
 AUTH_GOOGLE_*       Google OAuth credentials
 ```
@@ -287,15 +432,16 @@ AUTH_GOOGLE_*       Google OAuth credentials
 
 The provider system is entirely config-driven. There's one provider type — `openai-compatible` — that works with any API that speaks the OpenAI chat completions format.
 
-| API                   | baseUrl                          | How to configure                                                           |
-| --------------------- | -------------------------------- | -------------------------------------------------------------------------- |
-| OpenAI                | `https://api.openai.com/v1`      | Set `OPENAI_API_KEY` env var, select "OpenAI" in form                      |
-| Groq                  | `https://api.groq.com/openai/v1` | Set `GROQ_API_KEY` env var, or use "OpenAI Compatible" with custom baseUrl |
-| Together AI           | `https://api.together.xyz/v1`    | "OpenAI Compatible" with your key                                          |
-| LiteLLM               | `http://localhost:4000/v1`       | "OpenAI Compatible" with your key                                          |
-| Ollama (via proxy)    | `http://localhost:11434/v1`      | "OpenAI Compatible" (no key needed for local)                              |
-| vLLM                  | `http://localhost:8000/v1`       | "OpenAI Compatible" with your key                                          |
-| Any OpenAI-compatible | your URL                         | "OpenAI Compatible" in the agent form                                      |
+| API                   | baseUrl                               | How to configure                                                           |
+| --------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| **NVIDIA NIM**        | `https://integrate.api.nvidia.com/v1` | Set `NVIDIA_API_KEY` env var, select "NVIDIA NIM" in form (recommended)    |
+| OpenAI                | `https://api.openai.com/v1`           | Set `OPENAI_API_KEY` env var, select "OpenAI" in form                      |
+| Groq                  | `https://api.groq.com/openai/v1`      | Set `GROQ_API_KEY` env var, or use "OpenAI Compatible" with custom baseUrl |
+| Together AI           | `https://api.together.xyz/v1`         | "OpenAI Compatible" with your key                                          |
+| LiteLLM               | `http://localhost:4000/v1`            | "OpenAI Compatible" with your key                                          |
+| Ollama (via proxy)    | `http://localhost:11434/v1`           | "OpenAI Compatible" (no key needed for local)                              |
+| vLLM                  | `http://localhost:8000/v1`            | "OpenAI Compatible" with your key                                          |
+| Any OpenAI-compatible | your URL                              | "OpenAI Compatible" in the agent form                                      |
 
 ---
 
@@ -356,3 +502,22 @@ kill $(lsof -ti:3000)
 ## License
 
 MIT
+
+---
+
+## Acknowledgements
+
+Built with these amazing open-source projects:
+
+| Project                                          | Description                                           |
+| ------------------------------------------------ | ----------------------------------------------------- |
+| [NVIDIA NIM](https://build.nvidia.com/)          | Free-tier AI inference API with content safety models |
+| [Next.js](https://nextjs.org/)                   | React framework for server-rendered applications      |
+| [Drizzle ORM](https://orm.drizzle.team/)         | TypeScript ORM for PostgreSQL and SQLite              |
+| [Vitest](https://vitest.dev/)                    | Blazing-fast unit testing framework                   |
+| [Tailwind CSS](https://tailwindcss.com/)         | Utility-first CSS framework                           |
+| [tRPC](https://trpc.io/)                         | End-to-end typesafe APIs                              |
+| [Auth.js](https://authjs.dev/)                   | Authentication for web applications                   |
+| [Lucide Icons](https://lucide.dev/)              | Beautiful open-source icons                           |
+| [Ollama](https://ollama.com/)                    | Local LLM inference (embeddings)                      |
+| [pgvector](https://github.com/pgvector/pgvector) | Vector similarity search for PostgreSQL               |

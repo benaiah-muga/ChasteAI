@@ -133,6 +133,10 @@ export async function finalizeSetupAction(data: {
   apiKey: string
   baseUrl: string
   model: string
+  temperature?: number
+  contentSafetyEnabled?: boolean
+  contentSafetyModel?: string
+  contentSafetyBaseUrl?: string
 }) {
   const session = await auth()
   if (!session?.user?.id) return { error: "Not authenticated" }
@@ -159,6 +163,16 @@ export async function finalizeSetupAction(data: {
     const providerConfig: Record<string, unknown> = {
       type: data.providerType,
       model: data.model,
+      parameters: {
+        temperature: data.temperature ?? 0.7,
+      },
+      contentSafety: {
+        enabled: data.contentSafetyEnabled ?? true,
+        checkInput: false,
+        checkResponse: true,
+        model: data.contentSafetyModel ?? "nvidia/nemotron-3.5-content-safety",
+        baseUrl: data.contentSafetyBaseUrl ?? "https://integrate.api.nvidia.com/v1",
+      },
     }
     if (data.baseUrl) providerConfig.baseUrl = data.baseUrl
     if (data.apiKey) providerConfig.apiKey = data.apiKey
@@ -228,6 +242,36 @@ export async function testProviderConnectionAction(data: {
   } catch (e: any) {
     return {
       error: "Could not connect to the AI provider.",
+      details: e?.message ?? String(e),
+    }
+  }
+}
+
+export async function testContentSafetyAction(data: {
+  apiKey: string
+  baseUrl?: string
+  model?: string
+}) {
+  try {
+    const { apiKey, baseUrl, model } = data
+
+    if (!apiKey) {
+      return { error: "API key is required." }
+    }
+
+    const { checkContentSafety } = await import("@chaste-ai/ai")
+
+    await checkContentSafety("Hello, this is a connection test.", null, {
+      enabled: true,
+      apiKey,
+      baseUrl,
+      model,
+    })
+
+    return { success: true }
+  } catch (e: any) {
+    return {
+      error: "Could not connect to the content safety model.",
       details: e?.message ?? String(e),
     }
   }

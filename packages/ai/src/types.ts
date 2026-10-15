@@ -100,6 +100,25 @@ export const ProviderConfigSchema = z.object({
       topP: z.number().min(0).max(1).optional(),
     })
     .optional(),
+  embedding: z
+    .object({
+      model: z.string().optional(),
+      baseUrl: z.string().optional(),
+      apiKey: z.string().optional(),
+      dimensions: z.number().positive().optional(),
+    })
+    .optional(),
+  contentSafety: z
+    .object({
+      enabled: z.boolean().optional(),
+      checkInput: z.boolean().optional(),
+      checkResponse: z.boolean().optional(),
+      apiKey: z.string().optional(),
+      baseUrl: z.string().optional(),
+      model: z.string().optional(),
+      customPolicy: z.string().optional(),
+    })
+    .optional(),
   failover: z
     .object({
       enabled: z.boolean().optional(),
